@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace BIK.CoreBanking.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("BIK/v1/[controller]")]
     public class AccountsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

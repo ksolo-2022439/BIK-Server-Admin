@@ -7,7 +7,7 @@ using BIK.CoreBanking.DTOs;
 namespace BIK.CoreBanking.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("BIK/v1/[controller]")]
     public class TransactionsController : ControllerBase
     {
         private readonly ITransactionService _transactionService;

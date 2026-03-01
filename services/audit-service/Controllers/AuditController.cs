@@ -9,7 +9,7 @@ using BIK.AuditService.DTOs;
 namespace BIK.AuditService.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("BIK/v1/[controller]")]
     public class AuditController : ControllerBase
     {
         private readonly AuditDbContext _context;

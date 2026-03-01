@@ -3,7 +3,7 @@ const Currency = require('../Models/currency.model.js');
 
 const refreshExchangeRates = async () => {
     try {
-        console.log("🔄 Obteniendo tasas desde API externa...");
+        console.log("Obteniendo tasas desde API externa...");
         const response = await axios.get('https://open.er-api.com/v6/latest/USD');
         const { rates } = response.data;
 
