@@ -8,7 +8,7 @@ Esta documentación detalla la estructura, configuración y endpoints implementa
 
 Antes de comenzar, asegúrate de tener instalado lo siguiente:
 
-* **Node.js:** v16 o superior
+* **Node.js:** v8
 * **MongoDB:** Última versión estable
 * **Docker:** v20.10+
 * **Docker Compose:** v2.0+
@@ -189,7 +189,7 @@ dotnet run
 
 | Dependencia | Versión | Descripción |
 |------------|---------|-------------|
-| **Node.js** | 16+ | Runtime de JavaScript |
+| **Node.js** | 8 | Runtime de JavaScript |
 | **Express.js** | 5.2.1 | Framework web |
 | **Mongoose** | 9.1.5 | ODM para MongoDB |
 | **MongoDB** | Última | Base de datos NoSQL |
