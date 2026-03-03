@@ -1,6 +1,0 @@
-@BIK.CoreBanking_HostAddress = http://localhost:5045
-
-GET {{BIK.CoreBanking_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
