@@ -342,7 +342,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n  \"dpi\": \"1234567890123\",\n  \"typeAcount\": \"Monetaria\",\n  \"earningsM\": 1500.5,\n  \"nameAccount\": \"Cuenta QA {{$timestamp}}\",\n  \"email\": \"qa{{$timestamp}}@mail.com\",\n  \"phoneNumber\": \"+50255554222\"\n}"
+									"raw": "{\n  \"dpi\": \"1234567890123\",\n  \"typeAccount\": \"Monetaria\",\n  \"earningsM\": 1500.5,\n  \"nameAccount\": \"Cuenta QA {{$timestamp}}\",\n  \"email\": \"qa{{$timestamp}}@mail.com\",\n  \"phoneNumber\": \"+50255554222\"\n}"
 								},
 								"url": {
 									"raw": "{{admin_base_url}}/accounts/{{user_id}}",

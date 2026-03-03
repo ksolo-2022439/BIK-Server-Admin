@@ -1,17 +1,26 @@
 version: '3.8'
 
 services:
-  db:
+  postgres-db:
     image: postgres:16
-    container_name: postgres16
+    container_name: bik-postgres
     environment:
       POSTGRES_DB: admin
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
     ports:
-      - "5432:5432"
+      - "5433:5432" # <-- ESTO ES CLAVE: 5433 de tu PC apunta al 5432 de Docker
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  mongo-db:
+    image: mongo:latest
+    container_name: bik-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
 volumes:
   pgdata:
+  mongodata:
