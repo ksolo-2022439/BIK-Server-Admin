@@ -34,7 +34,7 @@ const depositSchema = new mongoose.Schema({
         default: 'COMPLETED'
     },
     madeBy: {
-        type: mongoose.Schema.Types.ObjectId, // <-- CORREGIDO AQUÍ (agregado mongoose.)
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }
 }, {

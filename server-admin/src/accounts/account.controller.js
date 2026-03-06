@@ -86,7 +86,7 @@ export const createAccount = async (req, res) => {
         await account.save();
 
         try {
-            await axios.post('http://localhost:5045/BIK/v1/Accounts/sync-account', {
+            await axios.post('http://core-banking:8080/BIK/v1/Accounts/sync-account', {
                 AccountNumber: account.numberAccount || account._id.toString(),
                 UserId: userId,
                 InitialBalance: 0 

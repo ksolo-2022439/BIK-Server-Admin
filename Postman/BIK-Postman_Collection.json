@@ -1,1101 +1,1102 @@
 {
-	"info": {
-		"_postman_id": "20463375-3b4d-41bc-bc24-b1d659b90b74",
-		"name": "BIK - API Multiservicio (Admin + CoreBanking + Auditoría)",
-		"description": "Colección multiservicio para BIK.\n\nIncluye:\n- Admin Server (Express) en {{admin_base_url}} (JWT Bearer)\n- Core Banking (.NET) en {{core_banking_base_url}}\n- Audit Service (.NET) en {{audit_base_url}}\n\nMódulo Favoritos omitido (vacío).\n\nConvención: cada solicitud tiene un nombre corto en español que describe lo que hace.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "48421810",
-		"_collection_link": "https://go.postman.co/collection/48421810-20463375-3b4d-41bc-bc24-b1d659b90b74?source=collection_link"
-	},
-	"item": [
-		{
-			"name": "Servidor Admin (Express)",
-			"item": [
-				{
-					"name": "Health",
-					"item": [
-						{
-							"name": "Health check",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/health",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"health"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Autenticación",
-					"item": [
-						{
-							"name": "Iniciar sesión",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"type": "text/javascript",
-										"exec": [
-											"pm.test('Estado 200', function () {",
-											"  pm.response.to.have.status(200);",
-											"});",
-											"let jsonData = {};",
-											"try { jsonData = pm.response.json(); } catch (e) {}",
-											"const token = jsonData?.userDetails?.token;",
-											"pm.test('Token guardado', function () {",
-											"  pm.expect(token).to.be.a('string').and.not.empty;",
-											"});",
-											"if (token) pm.collectionVariables.set('token', token);"
-										]
-									}
-								}
-							],
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/auth/login",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"auth",
-										"login"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Registrar usuario",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"username\": \"user_{{$timestamp}}\",\n  \"password\": \"Test1234!\",\n  \"role\": \"USER_ROLE\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/auth/register",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"auth",
-										"register"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener perfil",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/auth/me",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"auth",
-										"me"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Usuarios (ADMIN_ROLE)",
-					"item": [
-						{
-							"name": "Listar usuarios",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/users?limit=10&from=0",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"users"
-									],
-									"query": [
-										{
-											"key": "limit",
-											"value": "10"
-										},
-										{
-											"key": "from",
-											"value": "0"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener usuario",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/users/{{user_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"users",
-										"{{user_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Actualizar usuario",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"username\": \"usuario_actualizado_{{$timestamp}}\",\n  \"password\": \"NuevaPass1234!\",\n  \"role\": \"USER_ROLE\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/users/{{user_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"users",
-										"{{user_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Desactivar usuario",
-							"request": {
-								"method": "DELETE",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/users/{{user_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"users",
-										"{{user_id}}"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Cuentas",
-					"item": [
-						{
-							"name": "Listar cuentas",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/accounts",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener cuenta",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/accounts/{{account_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts",
-										"{{account_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Crear cuenta",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"dpi\": \"1234567890123\",\n  \"typeAccount\": \"Monetaria\",\n  \"earningsM\": 1500.5,\n  \"nameAccount\": \"Cuenta QA {{$timestamp}}\",\n  \"email\": \"qa{{$timestamp}}@mail.com\",\n  \"phoneNumber\": \"+50255554222\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/accounts/{{user_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts",
-										"{{user_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Actualizar cuenta",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"email\": \"correoejemplo123@gmail.com\",\n  \"phoneNumber\": \"55587903\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/accounts/{{account_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts",
-										"{{account_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Activar cuenta",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/accounts/{{account_id}}/activate",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts",
-										"{{account_id}}",
-										"activate"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Desactivar cuenta",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/accounts/{{account_id}}/desactivate",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"accounts",
-										"{{account_id}}",
-										"desactivate"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Depósitos",
-					"item": [
-						{
-							"name": "Crear depósito",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"accountId\": \"69a486331134cdf5242ea632\",\n  \"amount\": 500,\n  \"description\": \"Abono QA\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/deposits",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"deposits"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Listar depósitos",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/deposits/history/{{account_id}}?limit=5",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"deposits",
-										"history",
-										"{{account_id}}"
-									],
-									"query": [
-										{
-											"key": "limit",
-											"value": "5"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener depósito",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/deposits/{{deposit_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"deposits",
-										"{{deposit_id}}"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Transacciones",
-					"item": [
-						{
-							"name": "Hacer transferencia",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"sourceAccountId\": \"69a486331134cdf5242ea632\",\n  \"destinationAccountId\": \"69a486411134cdf5242ea638\",\n  \"amount\": 100.00,\n  \"description\": \"Transfer QA\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/transactions/transfer",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"transactions",
-										"transfer"
-									]
-								},
-								"description": "IMPORTANTE: destinationAccountId debe ser distinto a sourceAccountId."
-							},
-							"response": []
-						},
-						{
-							"name": "Pagar servicio",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"sourceAccountId\": \"69a486331134cdf5242ea632\",\n  \"amount\": 250,\n  \"typeService\": \"Internet\",\n  \"nameService\": \"Pago de servicios\",\n  \"numberAccountPay\": \"INT-9988\",\n  \"methodPayment\": \"Bancaria\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/transactions/pay-service",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"transactions",
-										"pay-service"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Listar transacciones",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/transactions/history/{{account_id}}?limit=10&page=1",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"transactions",
-										"history",
-										"{{account_id}}"
-									],
-									"query": [
-										{
-											"key": "limit",
-											"value": "10"
-										},
-										{
-											"key": "page",
-											"value": "1"
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener transacción",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "Authorization",
-										"value": "Bearer {{token}}"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/transactions/{{transaction_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"transactions",
-										"{{transaction_id}}"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Servicios",
-					"item": [
-						{
-							"name": "Listar servicios",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/services?status=&datePayment=",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"services"
-									],
-									"query": [
-										{
-											"key": "status",
-											"value": ""
-										},
-										{
-											"key": "datePayment",
-											"value": ""
-										}
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Crear servicio",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"nameService\": \"Pago de servicios\",\n  \"typeService\": \"Internet\",\n  \"numberAccountPay\": \"INT-9988\",\n  \"methodPayment\": \"Bancaria\",\n  \"amounth\": 250,\n  \"status\": \"COMPLETED\"\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/services",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"services"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Obtener servicio",
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/services/{{service_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"services",
-										"{{service_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Actualizar servicio",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n  \"amounth\": 300\n}"
-								},
-								"url": {
-									"raw": "{{admin_base_url}}/services/{{service_id}}",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"services",
-										"{{service_id}}"
-									]
-								}
-							},
-							"response": []
-						},
-						{
-							"name": "Cambiar estado servicio",
-							"request": {
-								"method": "PUT",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									}
-								],
-								"url": {
-									"raw": "{{admin_base_url}}/services/{{service_id}}/COMPLETED",
-									"host": [
-										"{{admin_base_url}}"
-									],
-									"path": [
-										"services",
-										"{{service_id}}",
-										"COMPLETED"
-									]
-								}
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "Currency Service",
-			"item": [
-				{
-					"name": "Obtener conversión",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"amount\": 100,\n    \"from\": \"USD\",\n    \"to\": \"GTQ\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{admin_base_url}}/currencies/convert",
-							"host": [
-								"{{admin_base_url}}"
-							],
-							"path": [
-								"currencies",
-								"convert"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Core Banking (.NET)",
-			"item": [
-				{
-					"name": "Depositar",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"accountId\": {{core_account_id_origen}},\n  \"amount\": 10.00\n}"
-						},
-						"url": {
-							"raw": "{{core_banking_base_url}}/api/Transactions/deposit",
-							"host": [
-								"{{core_banking_base_url}}"
-							],
-							"path": [
-								"api",
-								"Transactions",
-								"deposit"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Retirar",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"accountId\": {{core_account_id_origen}},\n  \"amount\": 5.00\n}"
-						},
-						"url": {
-							"raw": "{{core_banking_base_url}}/api/Transactions/withdraw",
-							"host": [
-								"{{core_banking_base_url}}"
-							],
-							"path": [
-								"api",
-								"Transactions",
-								"withdraw"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Transferir",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"fromAccountId\": {{core_account_id_origen}},\n  \"toAccountId\": {{core_account_id_destino}},\n  \"amount\": 2.50\n}"
-						},
-						"url": {
-							"raw": "{{core_banking_base_url}}/api/Transactions/transfer",
-							"host": [
-								"{{core_banking_base_url}}"
-							],
-							"path": [
-								"api",
-								"Transactions",
-								"transfer"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Balance",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{core_banking_base_url}}/accounts/1/balance",
-							"host": [
-								"{{core_banking_base_url}}"
-							],
-							"path": [
-								"accounts",
-								"1",
-								"balance"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "History",
-					"request": {
-						"method": "GET",
-						"header": []
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Servicio Auditoría (.NET)",
-			"item": [
-				{
-					"name": "Crear registro",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"actionType\": \"Transaction\",\n  \"description\": \"Log manual QA\",\n  \"accountId\": {{core_account_id_origen}},\n  \"userId\": null,\n  \"severity\": \"Info\",\n  \"sourceIpAddress\": \"{{ip_origen}}\"\n}"
-						},
-						"url": {
-							"raw": "{{audit_base_url}}/api/Audit",
-							"host": [
-								"{{audit_base_url}}"
-							],
-							"path": [
-								"api",
-								"Audit"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Listar registros",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"url": {
-							"raw": "{{audit_base_url}}/BIK/v1/accounts/1/history",
-							"host": [
-								"{{audit_base_url}}"
-							],
-							"path": [
-								"BIK",
-								"v1",
-								"accounts",
-								"1",
-								"history"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"variable": [
-		{
-			"key": "admin_base_url",
-			"value": "http://localhost:3001/BIK/v1",
-			"type": "string"
-		},
-		{
-			"key": "token",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "admin_username",
-			"value": "ADMINB",
-			"type": "string"
-		},
-		{
-			"key": "admin_password",
-			"value": "ADMINB",
-			"type": "string"
-		},
-		{
-			"key": "user_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "account_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "deposit_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "transaction_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "service_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "core_banking_base_url",
-			"value": "http://localhost:5000",
-			"type": "string"
-		},
-		{
-			"key": "core_account_id_origen",
-			"value": "1",
-			"type": "string"
-		},
-		{
-			"key": "core_account_id_destino",
-			"value": "2",
-			"type": "string"
-		},
-		{
-			"key": "audit_base_url",
-			"value": "http://localhost:5001",
-			"type": "string"
-		},
-		{
-			"key": "ip_origen",
-			"value": "127.0.0.1",
-			"type": "string"
-		}
-	]
+    "info": {
+        "_postman_id": "20463375-3b4d-41bc-bc24-b1d659b90b74",
+        "name": "BIK - MultiServicios",
+        "description": "Colección multiservicio para BIK.\n\nIncluye:\n- Admin Server (Express) en {{admin_base_url}} (JWT Bearer)\n- Core Banking (.NET) en {{core_banking_base_url}}\n- Audit Service (.NET) en {{audit_base_url}}\n\nMódulo Favoritos omitido (vacío).\n\nConvención: cada solicitud tiene un nombre corto en español que describe lo que hace.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": "48421810",
+        "_collection_link": "https://go.postman.co/collection/48421810-20463375-3b4d-41bc-bc24-b1d659b90b74?source=collection_link"
+    },
+    "item": [
+        {
+            "name": "Servidor Admin (Express)",
+            "item": [
+                {
+                    "name": "Autenticación",
+                    "item": [
+                        {
+                            "name": "Iniciar sesión",
+                            "event": [
+                                {
+                                    "listen": "test",
+                                    "script": {
+                                        "type": "text/javascript",
+                                        "exec": [
+                                            "pm.test('Estado 200', function () {",
+                                            "  pm.response.to.have.status(200);",
+                                            "});",
+                                            "let jsonData = {};",
+                                            "try { jsonData = pm.response.json(); } catch (e) {}",
+                                            "const token = jsonData?.userDetails?.token;",
+                                            "pm.test('Token guardado', function () {",
+                                            "  pm.expect(token).to.be.a('string').and.not.empty;",
+                                            "});",
+                                            "if (token) pm.collectionVariables.set('token', token);"
+                                        ]
+                                    }
+                                }
+                            ],
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"username\": \"{{admin_username}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/auth/login",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "login"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Registrar usuario",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"username\": \"user_{{$timestamp}}\",\n  \"password\": \"Test1234!\",\n  \"role\": \"USER_ROLE\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/auth/register",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "register"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener perfil",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/auth/me",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "auth",
+                                        "me"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Usuarios (ADMIN_ROLE)",
+                    "item": [
+                        {
+                            "name": "Listar usuarios",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/users?limit=10&from=0",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "users"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "limit",
+                                            "value": "10"
+                                        },
+                                        {
+                                            "key": "from",
+                                            "value": "0"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener usuario",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/users/{{user_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "{{user_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Actualizar usuario",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"username\": \"usuario_actualizado_{{$timestamp}}\",\n  \"password\": \"NuevaPass1234!\",\n  \"role\": \"USER_ROLE\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/users/{{user_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "{{user_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Desactivar usuario",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/users/{{user_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "users",
+                                        "{{user_id}}"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Cuentas",
+                    "item": [
+                        {
+                            "name": "Listar cuentas",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener cuenta",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts/{{account_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts",
+                                        "{{account_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Crear cuenta",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"dpi\": \"1234567890123\",\n  \"typeAccount\": \"Monetaria\",\n  \"earningsM\": 1500.5,\n  \"nameAccount\": \"Cuenta QA {{$timestamp}}\",\n  \"email\": \"qa{{$timestamp}}@mail.com\",\n  \"phoneNumber\": \"+50255554222\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts/{{user_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts",
+                                        "{{user_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Actualizar cuenta",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"email\": \"correoejemplo123@gmail.com\",\n  \"phoneNumber\": \"55587903\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts/{{account_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts",
+                                        "{{account_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Activar cuenta",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts/{{account_id}}/activate",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts",
+                                        "{{account_id}}",
+                                        "activate"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Desactivar cuenta",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/accounts/{{account_id}}/desactivate",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "accounts",
+                                        "{{account_id}}",
+                                        "desactivate"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Depósitos",
+                    "item": [
+                        {
+                            "name": "Crear depósito",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"accountId\": \"{{account_id}}\",\n  \"amount\": 500,\n  \"description\": \"Abono QA\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/deposits",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "deposits"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Listar depósitos",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/deposits/history/{{account_id}}?limit=5",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "deposits",
+                                        "history",
+                                        "{{account_id}}"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "limit",
+                                            "value": "5"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener depósito",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/deposits/{{deposit_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "deposits",
+                                        "{{deposit_id}}"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Transacciones",
+                    "item": [
+                        {
+                            "name": "Hacer transferencia",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sourceAccountId\": \"{{account_id}}\",\n  \"destinationAccountId\": \"{{account_id_destino}}\",\n  \"amount\": 100.00,\n  \"description\": \"Transfer QA\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/transfer",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "transfer"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Pagar servicio",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sourceAccountId\": \"{{account_id}}\",\n  \"amount\": 250,\n  \"typeService\": \"Internet\",\n  \"nameService\": \"Pago de servicios\",\n  \"numberAccountPay\": \"INT-9988\",\n  \"methodPayment\": \"Bancaria\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/pay-service",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "pay-service"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Listar transacciones",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/history/{{account_id}}?limit=10&page=1",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "history",
+                                        "{{account_id}}"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "limit",
+                                            "value": "10"
+                                        },
+                                        {
+                                            "key": "page",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener transacción",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/{{transaction_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "{{transaction_id}}"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Servicios",
+                    "item": [
+                        {
+                            "name": "Listar servicios",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/services?status=&datePayment=",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "services"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": ""
+                                        },
+                                        {
+                                            "key": "datePayment",
+                                            "value": ""
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Crear servicio",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"nameService\": \"Pago de servicios\",\n  \"typeService\": \"Internet\",\n  \"numberAccountPay\": \"INT-9988\",\n  \"methodPayment\": \"Bancaria\",\n  \"amounth\": 250,\n  \"status\": \"COMPLETED\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/services",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "services"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Obtener servicio",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/services/{{service_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "services",
+                                        "{{service_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Actualizar servicio",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"amounth\": 300\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/services/{{service_id}}",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "services",
+                                        "{{service_id}}"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Cambiar estado servicio",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{admin_base_url}}/services/{{service_id}}/COMPLETED",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "services",
+                                        "{{service_id}}",
+                                        "COMPLETED"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Core Banking (.NET)",
+            "item": [
+                {
+                    "name": "Cuentas",
+                    "item": [
+                        {
+                            "name": "Consultar Saldo",
+                            "request": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Accounts/{{account_id}}/balance",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Accounts",
+                                        "{{account_id}}",
+                                        "balance"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Historial de Transacciones",
+                            "request": {
+                                "method": "GET",
+                                "header": [],
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Accounts/{{account_id}}/history",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Accounts",
+                                        "{{account_id}}",
+                                        "history"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Sincronizar Cuenta",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"accountNumber\": \"1234567890\",\n  \"userId\": \"{{user_id}}\",\n  \"initialBalance\": 1500.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Accounts/sync-account",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Accounts",
+                                        "sync-account"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Operaciones",
+                    "item": [
+                        {
+                            "name": "Realizar Depósito",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"accountNumber\": \"1234567890\",\n  \"amount\": 500.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Transactions/deposit",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Transactions",
+                                        "deposit"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Realizar Retiro",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"accountNumber\": \"1234567890\",\n  \"amount\": 200.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Transactions/withdraw",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Transactions",
+                                        "withdraw"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Realizar Transferencia",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"fromAccountNumber\": \"1234567890\",\n  \"toAccountNumber\": \"0987654321\",\n  \"amount\": 300.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Transactions/transfer",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Transactions",
+                                        "transfer"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Servicio de Auditoría (.NET)",
+            "item": [
+                {
+                    "name": "Registrar Log",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actionType\": \"Prueba\",\n  \"description\": \"Registro manual de auditoría desde Postman\",\n  \"accountId\": 1,\n  \"userId\": \"{{user_id}}\",\n  \"severity\": \"Info\",\n  \"sourceIpAddress\": \"192.168.1.15\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{audit_base_url}}/BIK/v1/Audit",
+                            "host": [
+                                "{{audit_base_url}}"
+                            ],
+                            "path": [
+                                "BIK",
+                                "v1",
+                                "Audit"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Obtener Historial General",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{audit_base_url}}/BIK/v1/Audit?limit=100",
+                            "host": [
+                                "{{audit_base_url}}"
+                            ],
+                            "path": [
+                                "BIK",
+                                "v1",
+                                "Audit"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "100"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Obtener Historial por Cuenta",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{audit_base_url}}/BIK/v1/accounts/{{account_id}}/history?limit=50",
+                            "host": [
+                                "{{audit_base_url}}"
+                            ],
+                            "path": [
+                                "BIK",
+                                "v1",
+                                "accounts",
+                                "{{account_id}}",
+                                "history"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Servicio de Divisas (Node.js)",
+            "item": [
+                {
+                    "name": "Convertir Divisas",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 100,\n  \"from\": \"USD\",\n  \"to\": \"GTQ\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{currency_base_url}}/BIK/v1/currencies/convert",
+                            "host": [
+                                "{{currency_base_url}}"
+                            ],
+                            "path": [
+                                "BIK",
+                                "v1",
+                                "currencies",
+                                "convert"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "admin_base_url",
+            "value": "http://localhost:3001/BIK/v1",
+            "type": "string"
+        },
+        {
+            "key": "core_banking_base_url",
+            "value": "http://localhost:5045/BIK/v1",
+            "type": "string"
+        },
+        {
+            "key": "audit_base_url",
+            "value": "http://localhost:5001",
+            "type": "string"
+        },
+        {
+            "key": "currency_base_url",
+            "value": "http://localhost:3002",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "admin_username",
+            "value": "ADMINB",
+            "type": "string"
+        },
+        {
+            "key": "admin_password",
+            "value": "ADMINB",
+            "type": "string"
+        },
+        {
+            "key": "user_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "account_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "account_id_destino",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "deposit_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "transaction_id",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "service_id",
+            "value": "",
+            "type": "string"
+        }
+    ]
 }

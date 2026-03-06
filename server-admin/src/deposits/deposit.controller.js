@@ -36,7 +36,7 @@ export const createDeposit = async (req, res) => {
 
         if (role === 'ADMIN_ROLE') {
             try {
-                await axios.post('http://localhost:5045/BIK/v1/Transactions/deposit', {
+                await axios.post('http://core-banking:8080/BIK/v1/Transactions/deposit', {
                     AccountNumber: destinationAccount.numberAccount,
                     Amount: amount
                 });
@@ -60,7 +60,7 @@ export const createDeposit = async (req, res) => {
             if (sourceAccount.balance < amount) return res.status(400).json({ success: false, message: 'Fondos insuficientes.' });
 
             try {
-                await axios.post('http://localhost:5045/BIK/v1/Transactions/transfer', {
+                await axios.post('http://core-banking:8080/BIK/v1/Transactions/transfer', {
                     FromAccountNumber: sourceAccount.numberAccount,
                     ToAccountNumber: destinationAccount.numberAccount,
                     Amount: amount

@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgres:16
+    container_name: bik-postgres
+    environment:
+      POSTGRES_DB: admin
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  mongo-db:
+    image: mongo:latest
+    container_name: bik-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  audit-service:
+    build: 
+      context: ./BIK-AuditService/BIK.AuditService
+      dockerfile: Dockerfile
+    container_name: bik-auditservice
+    ports:
+      - "5001:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=BIK_AuditService;Username=admin;Password=admin;SslMode=Disable
+    depends_on:
+      - postgres-db
+
+  core-banking:
+    build: 
+      context: ./BIK-CoreBanking/BIK.CoreBanking
+      dockerfile: Dockerfile
+    container_name: bik-corebanking
+    ports:
+      - "5045:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=BIK_CoreBanking;Username=admin;Password=admin;SslMode=Disable
+      - AuditServiceUrl=http://audit-service:8080/BIK/v1/Audit
+    depends_on:
+      - postgres-db
+      - audit-service
+
+  currency-service:
+    build:
+      context: ./BIK-CurrencyServer/currency-service
+      dockerfile: Dockerfile
+    container_name: bik-currencyservice
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGODB_URI=mongodb://mongo-db:27017/bik_currencies
+    depends_on:
+      - mongo-db
+
+  server-admin:
+    build:
+      context: ./BIK-ServerAdmin/server-admin
+      dockerfile: Dockerfile
+    container_name: bik-serveradmin
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - URI_MONGODB=mongodb://mongo-db:27017/bik_db
+      - SECRET_KEY=TuClaveSuperSecretaBIK2026
+      - CORE_BANKING_URL=http://core-banking:8080
+      - CURRENCY_SERVICE_URL=http://currency-service:3002
+    depends_on:
+      - mongo-db
+      - core-banking
+      - currency-service
+
+volumes:
+  pgdata:
+  mongodata:

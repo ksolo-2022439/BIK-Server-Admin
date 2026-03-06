@@ -86,7 +86,7 @@ export const payService = async (req, res) => {
         }
 
         try {
-            await axios.post('http://localhost:5045/BIK/v1/Transactions/withdraw', {
+            await axios.post('http://core-banking:8080/BIK/v1/Transactions/withdraw', {
                 AccountNumber: sourceAccount.numberAccount,
                 Amount: amountNum
             });
@@ -156,7 +156,7 @@ export const getTransactionHistory = async (req, res) => {
             .populate('sourceAccount', 'numberAccount nameAccount')
             .populate('destinationAccount', 'numberAccount nameAccount')
             .populate('serviceId', 'nameService typeService')
-            .sort({ date: -1 }) // <--- "Ordenadas por fecha"
+            .sort({ date: -1 })
             .limit(limit * 1)
             .skip((page - 1) * limit);
 
@@ -182,7 +182,6 @@ export const getTransactionHistory = async (req, res) => {
     }
 };
 
-// ... getTransactionById ...
 export const getTransactionById = async (req, res) => {
     try {
         const { id } = req.params;
