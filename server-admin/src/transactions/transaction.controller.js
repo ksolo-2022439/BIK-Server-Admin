@@ -197,3 +197,48 @@ export const getTransactionById = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error', error: error.message });
     }
 };
+
+export const createAchOut = async (req, res) => {
+    try {
+        const { targetBank, targetAccountNumber, targetAccountType, currency, concept, amount, sourceAccountId } = req.body;
+
+        const account = await Account.findById(sourceAccountId);
+        if (!account) return res.status(404).json({ message: "Cuenta de origen no encontrada en Gateway" });
+
+        const corePayload = {
+            FromAccountNumber: account.numberAccount,
+            TargetBank: targetBank,
+            TargetAccountNumber: targetAccountNumber,
+            TargetAccountType: targetAccountType,
+            Currency: currency,
+            Concept: concept,
+            Amount: amount
+        };
+
+        const coreResponse = await axios.post(`${process.env.CORE_BANKING_URL}/BIK/v1/Transactions/ach/out`, corePayload);
+
+        res.status(200).json({ message: "Transferencia ACH saliente en proceso", details: coreResponse.data });
+    } catch (error) {
+        res.status(500).json({ message: "Error al procesar ACH Saliente", error: error.response?.data || error.message });
+    }
+};
+
+export const createAchIn = async (req, res) => {
+    try {
+        const { sourceBank, sourceAccountNumber, localAccountNumber, concept, amount } = req.body;
+
+        const corePayload = {
+            SourceBank: sourceBank,
+            SourceAccountNumber: sourceAccountNumber,
+            LocalAccountNumber: localAccountNumber,
+            Concept: concept,
+            Amount: amount
+        };
+
+        const coreResponse = await axios.post(`${process.env.CORE_BANKING_URL}/BIK/v1/Transactions/ach/in`, corePayload);
+
+        res.status(200).json({ message: "Transferencia ACH entrante recibida exitosamente", details: coreResponse.data });
+    } catch (error) {
+        res.status(500).json({ message: "Error al procesar ACH Entrante", error: error.response?.data || error.message });
+    }
+};

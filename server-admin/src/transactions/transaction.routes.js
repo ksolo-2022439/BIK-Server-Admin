@@ -11,7 +11,10 @@ import {
     validateTransactionId,
     validateGetHistory
 } from '../../middlewares/transactions-validators.js';
-import { validateJWT } from '../../middlewares/validate-jwt.js'; 
+import { validateJWT } from '../../middlewares/validate-jwt.js';
+
+import { createAchOut, createAchIn } from "./transaction.controller.js";
+import { achOutValidator, achInValidator } from "../../middlewares/transactions-validators.js";
 
 const router = Router();
 
@@ -29,6 +32,9 @@ router.post(
     validateServicePayment,
     payService
 );
+
+router.post("/ach/out", validateJWT, achOutValidator, createAchOut);
+router.post("/ach/in", validateJWT, achInValidator, createAchIn);
 
 // Rutas GET - Consultas
 router.get(

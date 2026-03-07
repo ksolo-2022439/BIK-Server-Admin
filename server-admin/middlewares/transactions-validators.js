@@ -1,5 +1,6 @@
 import { body, param } from 'express-validator';
 import { checkValidators } from './check-validators.js';
+import { errorHandler } from "./handle-error.js";
 
 export const validateTransfer = [
     body('sourceAccountId')
@@ -77,4 +78,32 @@ export const validateTransactionId = [
         .isMongoId().withMessage('El ID de la transacción no es válido'),
     
     checkValidators
+];
+
+const bancosAutorizados = [
+    "Banco Industrial", 
+    "Banrural", 
+    "Banco G&T Continental", 
+    "BAC Credomatic", 
+    "Banco Promerica"
+];
+
+export const achOutValidator = [
+    body("sourceAccountId").isMongoId().withMessage("El ID de la cuenta de origen es inválido"),
+    body("targetBank").isIn(bancosAutorizados).withMessage(`Banco no autorizado. Opciones válidas: ${bancosAutorizados.join(', ')}`),
+    body("targetAccountNumber").notEmpty().withMessage("El número de cuenta destino es requerido"),
+    body("targetAccountType").notEmpty().withMessage("El tipo de cuenta destino es requerido"),
+    body("currency").equals("GTQ").withMessage("La moneda debe ser GTQ"),
+    body("concept").notEmpty().withMessage("El concepto es requerido"),
+    body("amount").isFloat({ gt: 0 }).withMessage("El monto debe ser mayor a cero"),
+    errorHandler
+];
+
+export const achInValidator = [
+    body("sourceBank").isIn(bancosAutorizados).withMessage(`Banco de origen no autorizado. Opciones válidas: ${bancosAutorizados.join(', ')}`),
+    body("sourceAccountNumber").notEmpty().withMessage("El número de cuenta de origen es requerido"),
+    body("localAccountNumber").notEmpty().withMessage("El número de cuenta local destino es requerido"),
+    body("concept").notEmpty().withMessage("El concepto es requerido"),
+    body("amount").isFloat({ gt: 0 }).withMessage("El monto debe ser mayor a cero"),
+    errorHandler
 ];

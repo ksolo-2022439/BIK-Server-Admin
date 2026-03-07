@@ -563,6 +563,68 @@
                             }
                         },
                         {
+                            "name": "Transferencia ACH Saliente (ACH Out)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sourceAccountId\": \"{{account_id}}\",\n  \"targetBank\": \"Banco Industrial\",\n  \"targetAccountNumber\": \"9876543210\",\n  \"targetAccountType\": \"Ahorro\",\n  \"currency\": \"GTQ\",\n  \"concept\": \"Pago a proveedor exterior\",\n  \"amount\": 150.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/ach/out",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "ach",
+                                        "out"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Transferencia ACH Entrante (ACH In)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sourceBank\": \"Banrural\",\n  \"sourceAccountNumber\": \"1122334455\",\n  \"localAccountNumber\": \"1234567890\",\n  \"concept\": \"Abono de salario externo\",\n  \"amount\": 5000.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{admin_base_url}}/transactions/ach/in",
+                                    "host": [
+                                        "{{admin_base_url}}"
+                                    ],
+                                    "path": [
+                                        "transactions",
+                                        "ach",
+                                        "in"
+                                    ]
+                                }
+                            }
+                        },
+                        {
                             "name": "Listar transacciones",
                             "request": {
                                 "method": "GET",
@@ -908,6 +970,60 @@
                                     "path": [
                                         "Transactions",
                                         "transfer"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Transferencia ACH Saliente (ACH Out)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"fromAccountNumber\": \"1234567890\",\n  \"targetBank\": \"Banco Industrial\",\n  \"targetAccountNumber\": \"9876543210\",\n  \"targetAccountType\": \"Ahorro\",\n  \"currency\": \"GTQ\",\n  \"concept\": \"Prueba ACH Out Core\",\n  \"amount\": 300.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Transactions/ach/out",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Transactions",
+                                        "ach",
+                                        "out"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Transferencia ACH Entrante (ACH In)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"sourceBank\": \"Banrural\",\n  \"sourceAccountNumber\": \"1122334455\",\n  \"localAccountNumber\": \"1234567890\",\n  \"concept\": \"Prueba ACH In Core\",\n  \"amount\": 800.00\n}"
+                                },
+                                "url": {
+                                    "raw": "{{core_banking_base_url}}/Transactions/ach/in",
+                                    "host": [
+                                        "{{core_banking_base_url}}"
+                                    ],
+                                    "path": [
+                                        "Transactions",
+                                        "ach",
+                                        "in"
                                     ]
                                 }
                             }

@@ -10,30 +10,16 @@ import {
     validateGetAccountDeposits
 } from '../../middlewares/deposits-validators.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
+import { hasRoles } from '../../middlewares/validate-roles.js';
 
 const router = Router();
 
-// Rutas POST - Crear nuevo depósito
-router.post(
-    '/',
-    validateJWT,
-    validateCreateDeposit,
-    createDeposit
-);
+router.use(validateJWT);
+router.use(hasRoles('ADMIN_ROLE'));
 
-// Rutas GET - Consultas
-router.get(
-    '/history/:accountId',
-    validateJWT,
-    validateGetAccountDeposits,
-    getDepositsByAccount
-);
+router.post('/', validateCreateDeposit, createDeposit);
 
-router.get(
-    '/:id',
-    validateJWT,
-    validateGetDepositById,
-    getDepositById
-);
+router.get('/history/:accountId', validateGetAccountDeposits, getDepositsByAccount);
+router.get('/:id', validateGetDepositById, getDepositById);
 
 export default router;
