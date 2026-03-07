@@ -12,6 +12,11 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   mongo-db:
     image: mongo:latest
@@ -31,7 +36,8 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=BIK_AuditService;Username=admin;Password=admin;SslMode=Disable
     depends_on:
-      - postgres-db
+          postgres-db:
+            condition: service_healthy
 
   core-banking:
     build: 
@@ -44,8 +50,8 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres-db;Port=5432;Database=BIK_CoreBanking;Username=admin;Password=admin;SslMode=Disable
       - AuditServiceUrl=http://audit-service:8080/BIK/v1/Audit
     depends_on:
-      - postgres-db
-      - audit-service
+          postgres-db:
+            condition: service_healthy
 
   currency-service:
     build:
