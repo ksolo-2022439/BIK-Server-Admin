@@ -147,3 +147,117 @@ export const executeCashDeposit = async (req, res) => {
         session.endSession();
     }
 };
+
+/**
+ * Ejecuta una transferencia utilizando el número telefónico como identificador.
+ * Localiza al usuario destino, identifica su cuenta monetaria principal y procesa el débito/crédito.
+ */
+export const executeMobileTransfer = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { monto, telefonoDestino, descripcion } = req.body;
+        const usuarioDestino = await User.findOne({ telefono: telefonoDestino });
+
+        if (!usuarioDestino) {
+            throw new Error('No existe un usuario vinculado a este número telefónico.');
+        }
+
+        const cuentaDestino = await Account.findOne({ usuarioId: usuarioDestino._id, tipo: 'Monetaria' }).session(session);
+        const cuentaOrigen = await Account.findOne({ usuarioId: req.user.uid, saldo: { $gte: monto } }).session(session);
+
+        if (!cuentaOrigen || !cuentaDestino) {
+            throw new Error('Error en la vinculación de cuentas para transferencia móvil.');
+        }
+
+        cuentaOrigen.saldo -= monto;
+        cuentaDestino.saldo += monto;
+
+        await cuentaOrigen.save({ session });
+        await cuentaDestino.save({ session });
+
+        const transaction = new Transaction({
+            cuentaOrigenId: cuentaOrigen._id,
+            cuentaDestinoId: cuentaDestino._id,
+            monto,
+            tipo: 'Transferencia_Movil',
+            descripcion: `Transferencia Móvil a ${telefonoDestino}: ${descripcion}`,
+            estado: 'Completada'
+        });
+
+        await transaction.save({ session });
+        await session.commitTransaction();
+
+        res.status(200).json({ status: 'success', data: transaction });
+    } catch (error) {
+        await session.abortTransaction();
+        res.status(400).json({ status: 'error', message: error.message });
+    } finally {
+        session.endSession();
+    }
+};
+
+/**
+ * Procesa una transferencia internacional simulando la red SWIFT.
+ * Requiere códigos de identificación bancaria internacional y aplica comisiones por servicio exterior.
+ */
+export const executeInternationalTransfer = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+        const { cuentaOrigenId, monto, swift, iban, beneficiario, descripcion } = req.body;
+        const comision = monto * 0.05; 
+        const montoTotal = monto + comision;
+
+        const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
+
+        if (!cuentaOrigen || cuentaOrigen.saldo < montoTotal) {
+            throw new Error('Fondos insuficientes para cubrir el monto y la comisión internacional.');
+        }
+
+        cuentaOrigen.saldo -= montoTotal;
+        await cuentaOrigen.save({ session });
+
+        const transaction = new Transaction({
+            cuentaOrigenId,
+            monto,
+            tipo: 'Transferencia_Internacional',
+            descripcion: `SWIFT: ${swift} | IBAN: ${iban} | Beneficiario: ${beneficiario} | ${descripcion}`,
+            estado: 'En_Proceso'
+        });
+
+        await transaction.save({ session });
+        await session.commitTransaction();
+
+        res.status(200).json({ status: 'success', data: transaction, comisionAplicada: comision });
+    } catch (error) {
+        await session.abortTransaction();
+        res.status(400).json({ status: 'error', message: error.message });
+    } finally {
+        session.endSession();
+    }
+};
+
+/**
+ * Genera un desglose analítico de los movimientos financieros del usuario.
+ * Agrupa los gastos por categoría de servicio y tipo de transferencia para el módulo de Finanzas Personales.
+ */
+export const getPersonalFinances = async (req, res) => {
+    try {
+        const stats = await Transaction.aggregate([
+            { $match: { cuentaOrigenId: { $ne: null } } },
+            { $group: {
+                _id: "$tipo",
+                totalGastado: { $sum: "$monto" },
+                conteo: { $sum: 1 }
+            }},
+            { $sort: { totalGastado: -1 } }
+        ]);
+
+        res.status(200).json({ status: 'success', data: stats });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
