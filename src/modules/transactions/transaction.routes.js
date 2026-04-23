@@ -6,6 +6,7 @@ import { isAdmin } from '../../middlewares/validate-roles.js';
 const router = Router();
 
 router.use(validateJWT);
+router.use(auditLogger);
 
 router.post('/transfer', executeInternalTransfer);
 router.post('/ach', executeACHTransfer);
