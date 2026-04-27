@@ -15,7 +15,14 @@ export const createUser = async (req, res) => {
         const newUser = new User({ dpi, email, telefono, ...userData });
         await newUser.save();
 
-        // await axios.post('http://url-de-csharp/api/auth/register', { dpi, email, telefono, password, uid: newUser._id });
+        await axios.post('http://localhost:5213/api/auth/register-credentials', {
+            userId: newUser._id.toString(),
+            dpi,
+            email,
+            telefono,
+            password,
+            rol: newUser.rol
+        });
 
         res.status(201).json({
             status: 'success',
