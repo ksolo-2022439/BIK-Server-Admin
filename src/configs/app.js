@@ -11,9 +11,11 @@ import serviceRoutes from '../modules/services/service.routes.js';
 import qrRoutes from '../modules/qr/qr.routes.js';
 import currencyRoutes from '../modules/currency/currency.routes.js';
 import insuranceRoutes from '../modules/insurance/insurance.routes.js';
-import notificationRoutes from '../modules/notification/notification.routes.js';
-import documentRoutes from '../modules/document/document.routes.js';
+import notificationRoutes from '../modules/notifications/notification.routes.js';
+import documentRoutes from '../modules/documents/document.routes.js';
 import auditRoutes from '../modules/audit/audit.routes.js';
+
+import { setupSwagger } from './swagger.js';
 
 const app = express();
 
@@ -44,6 +46,8 @@ app.use('/api/insurance', insuranceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/audit', auditRoutes);
+
+setupSwagger(app);
 
 /**
  * Endpoint de verificación de disponibilidad del sistema.
