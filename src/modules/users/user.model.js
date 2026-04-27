@@ -5,10 +5,21 @@ const userSchema = new mongoose.Schema({
     apellidos: { type: String, required: true },
     dpi: { type: String, required: true, unique: true, length: 13 },
     fechaNacimiento: { type: Date, required: true },
-    direccion: { type: String, required: true },
-    telefono: { type: String, required: true },
+    
+    direccion: {
+        departamento: { type: String, required: true },
+        municipio: { type: String, required: true },
+        zona: { type: String, required: true },
+        detalle: { type: String, required: true }
+    },
+    
+    telefono: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    fotoDpiUrl: { type: String },
+    
+    fotoDpiAdelanteUrl: { type: String, required: true },
+    fotoDpiAtrasUrl: { type: String, required: true },
+    fotoRostroUrl: { type: String, required: true },
+    
     ingresosMensuales: { type: Number, default: 0 },
     estado: { 
         type: String, 

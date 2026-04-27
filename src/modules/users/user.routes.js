@@ -35,16 +35,36 @@ const router = Router();
  *                 type: string
  *                 format: date
  *               direccion:
- *                 type: string
+ *                 type: object
+ *                 properties:
+ *                   departamento:
+ *                     type: string
+ *                   municipio:
+ *                     type: string
+ *                   zona:
+ *                     type: string
+ *                   detalle:
+ *                     type: string
  *               telefono:
  *                 type: string
  *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 description: "Se enviará al Auth-Service, no se guarda en Mongo"
+ *               ingresosMensuales:
+ *                 type: number
+ *               fotoDpiAdelanteUrl:
+ *                 type: string
+ *               fotoDpiAtrasUrl:
+ *                 type: string
+ *               fotoRostroUrl:
  *                 type: string
  *     responses:
  *       201:
  *         description: Usuario creado exitosamente.
  *       400:
- *         description: El DPI o Correo ya están registrados.
+ *         description: El DPI, Teléfono o Correo ya están registrados.
  */
 router.post('/register', createUser);
 

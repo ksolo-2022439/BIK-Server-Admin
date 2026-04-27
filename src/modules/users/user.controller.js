@@ -1,21 +1,21 @@
 import User from './user.model.js';
 
-// Crear un nuevo usuario (Registro desde la app)
 export const createUser = async (req, res) => {
     try {
-        const { dpi, email } = req.body;
+        const { dpi, email, telefono, password, ...userData } = req.body;
 
-        // Validar si el DPI o Email ya existen
-        const existingUser = await User.findOne({ $or: [{ dpi }, { email }] });
+        const existingUser = await User.findOne({ $or: [{ dpi }, { email }, { telefono }] });
         if (existingUser) {
             return res.status(400).json({
                 status: 'error',
-                message: 'El DPI o el Correo Electrónico ya están registrados.'
+                message: 'El DPI, Correo Electrónico o Teléfono ya están registrados.'
             });
         }
 
-        const newUser = new User(req.body);
+        const newUser = new User({ dpi, email, telefono, ...userData });
         await newUser.save();
+
+        // await axios.post('http://url-de-csharp/api/auth/register', { dpi, email, telefono, password, uid: newUser._id });
 
         res.status(201).json({
             status: 'success',
