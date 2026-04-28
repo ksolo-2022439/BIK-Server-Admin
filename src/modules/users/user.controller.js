@@ -1,4 +1,5 @@
 import User from './user.model.js';
+import axios from 'axios';
 
 export const createUser = async (req, res) => {
     try {
@@ -15,7 +16,7 @@ export const createUser = async (req, res) => {
         const newUser = new User({ dpi, email, telefono, ...userData });
         await newUser.save();
 
-        await axios.post('http://localhost:5213/api/auth/register-credentials', {
+        await axios.post(process.env.AUTH_SERVICE_URL + '/api/auth/register-credentials', {
             userId: newUser._id.toString(),
             dpi,
             email,
