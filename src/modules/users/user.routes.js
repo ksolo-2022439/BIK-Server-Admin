@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUser, getUserByDpi, updateUser, updateUserStatus } from './user.controller.js';
+import { createUser, getUserByDpi, getUserById, updateUser, updateUserStatus } from './user.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin } from '../../middlewares/validate-roles.js';
 
@@ -69,6 +69,28 @@ const router = Router();
 router.post('/register', createUser);
 
 router.use(validateJWT);
+
+/**
+ * @swagger
+ * /api/users/id/{id}:
+ *   get:
+ *     summary: Obtener usuario por su ID de MongoDB
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Datos del usuario.
+ *       404:
+ *         description: Usuario no encontrado.
+ */
+router.get('/id/:id', getUserById);
 
 /**
  * @swagger

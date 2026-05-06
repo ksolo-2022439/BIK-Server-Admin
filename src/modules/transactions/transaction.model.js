@@ -2,21 +2,45 @@ import mongoose from 'mongoose';
 
 const transactionSchema = new mongoose.Schema({
     cuentaOrigenId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es depósito en efectivo
-    cuentaDestinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es ACH externo
+    cuentaDestinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es ACH o Internacional
     monto: { type: Number, required: true },
     tipo: { 
         type: String, 
-        enum: ['Transferencia_Local', 'Transferencia_ACH', 'Deposito_Efectivo', 'Retiro', 'Pago_Servicio', 'Remesa', 'Pago_QR', 'Reversion'], 
+        enum: [
+            'Transferencia_Local', 
+            'Transferencia_ACH', 
+            'Transferencia_Internacional',
+            'Transferencia_Movil',
+            'Deposito_Efectivo', 
+            'Retiro', 
+            'Pago_Servicio', 
+            'Remesa', 
+            'Pago_QR', 
+            'Reversion'
+        ], 
         required: true 
     },
     descripcion: { type: String, maxlength: 200 }, // Opcional
     
-    // CAMPOS PARA ACH (Solo requeridos si tipo === 'Transferencia_ACH')
+    // ACH NACIONAL
     achDetails: {
-        bancoDestino: { type: String }, // Ej. '001', '014', '041'
+        bancoDestino: { type: String }, // Nombre o código del banco
         titularDestino: { type: String },
         cuentaDestinoExterna: { type: String },
-        tipoCuentaDestino: { type: String, enum: ['Monetaria', 'Ahorro'] }
+        tipoCuentaDestino: { type: String, enum: ['Monetaria', 'Ahorro', ''] }
+    },
+
+    internationalDetails: {
+        swiftBic: { type: String }, // Código SWIFT/BIC
+        abaRouting: { type: String }, // Routing Number para USA
+        bancoDestino: { type: String }, // Nombre del banco extranjero
+        direccionBanco: { type: String }, // Ciudad, Estado, País
+        cuentaIban: { type: String }, // Número de cuenta o IBAN
+        tipoBeneficiario: { type: String, enum: ['Individual', 'Empresa', ''] },
+        nombreBeneficiario: { type: String }, // Nombre completo
+        direccionBeneficiario: { type: String }, // Calle, Ciudad, País
+        motivoTransferencia: { type: String },
+        comisionAplicada: { type: Number, default: 0 } // Costo del envío SWIFT
     },
 
     estado: { 

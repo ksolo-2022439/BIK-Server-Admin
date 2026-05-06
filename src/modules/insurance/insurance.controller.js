@@ -13,3 +13,31 @@ export const enrollInsurance = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+/**
+ * Actualiza el estado de una póliza de seguro (ej. cancelación).
+ */
+export const updateInsurance = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updated = await Insurance.findByIdAndUpdate(id, req.body, { new: true });
+        if (!updated) {
+            return res.status(404).json({ status: 'error', message: 'Póliza no encontrada.' });
+        }
+        res.status(200).json({ status: 'success', data: updated });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+/**
+ * Obtiene las pólizas de seguro del usuario autenticado.
+ */
+export const getUserInsurances = async (req, res) => {
+    try {
+        const insurances = await Insurance.find({ usuarioId: req.user.uid });
+        res.status(200).json({ status: 'success', data: insurances });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};

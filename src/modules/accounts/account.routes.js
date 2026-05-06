@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAccount, getUserAccounts, updateAccountStatus, updateTransferLimit } from './account.controller.js';
+import { createAccount, getUserAccounts, updateAccountStatus, updateTransferLimit, toggleFavoriteAccount } from './account.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin } from '../../middlewares/validate-roles.js';
 
@@ -128,5 +128,25 @@ router.patch('/:id/limits', updateTransferLimit);
  *         description: No se puede cancelar cuenta con fondos.
  */
 router.patch('/:id/status', isAdmin, updateAccountStatus);
+
+/**
+ * @swagger
+ * /api/accounts/{id}/favorite:
+ *   patch:
+ *     summary: Alternar estado favorito de una cuenta
+ *     tags: [Cuentas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Estado favorito actualizado.
+ */
+router.patch('/:id/favorite', toggleFavoriteAccount);
 
 export default router;

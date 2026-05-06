@@ -1,22 +1,33 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import User from './src/modules/users/user.model.js';
+import Account from './src/modules/accounts/account.model.js';
+import Card from './src/modules/cards/card.model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const seedData = async () => {
+export const seedData = async () => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('🔌 Conectado a MongoDB para el sembrado de datos...');
+        if (mongoose.connection.readyState === 0) {
+            await mongoose.connect(process.env.MONGODB_URI);
+            console.log('🔌 Conectado a MongoDB para el sembrado de datos...');
+        } else {
+            console.log('🔌 Ya conectado a MongoDB, procediendo con el sembrado...');
+        }
 
-        // Limpiar datos previos
-        await User.deleteMany({});
+        // Verificar si ya existen datos para no destruir información real
+        const existingUsers = await User.countDocuments();
+        if (existingUsers > 0) {
+            console.log(`⏩ DataSeeder omitido: Ya existen ${existingUsers} usuarios en la base de datos.`);
+            return;
+        }
+
+        console.log('📦 Base de datos vacía detectada. Ejecutando DataSeeder...');
 
         const passwordHash = await bcrypt.hash('Password123!', 10);
 
         const users = [
-            // 1 Administrador
             {
                 nombres: "Admin",
                 apellidos: "Sistema",
@@ -32,10 +43,26 @@ const seedData = async () => {
                 ingresosMensuales: 15000,
                 estado: "Activo",
                 rol: "Administrador"
+            },
+            {
+                nombres: "Juan",
+                apellidos: "Pruebas",
+                dpi: "3333444455556",
+                fechaNacimiento: new Date("1992-05-15"),
+                direccion: { departamento: "Guatemala", municipio: "Guatemala", zona: "10", detalle: "Edificio X" },
+                telefono: "55554444",
+                email: "cliente@bik.com",
+                passwordHash,
+                fotoDpiAdelanteUrl: "https://bik.com/uploads/cliente_front.png",
+                fotoDpiAtrasUrl: "https://bik.com/uploads/cliente_back.png",
+                fotoRostroUrl: "https://bik.com/uploads/cliente_face.png",
+                ingresosMensuales: 8000,
+                estado: "Activo",
+                rol: "Cliente"
             }
         ];
 
-        // 10 Usuarios Clientes
+        // 10 Usuarios Clientes aleatorios
         for (let i = 1; i <= 10; i++) {
             users.push({
                 nombres: `Usuario${i}`,
@@ -55,15 +82,80 @@ const seedData = async () => {
             });
         }
 
-        await User.insertMany(users);
-        console.log('✅ DataSeeder completado: 1 Administrador y 10 Usuarios creados.');
+        const createdUsers = await User.insertMany(users);
+        console.log('✅ DataSeeder completado: Administrador, Cliente Pruebas y 10 Usuarios creados.');
+        
+        const clientePrueba = createdUsers.find(u => u.email === 'cliente@bik.com');
+        if (clientePrueba) {
+            const accAhorro = await Account.create({
+                numeroCuenta: '4000000001',
+                usuarioId: clientePrueba._id,
+                tipo: 'Ahorro',
+                moneda: 'GTQ',
+                saldo: 15450.75,
+                limiteTransferenciaDiario: 2000,
+                isFavorite: true,
+                estado: 'Activa'
+            });
+
+            const accMonetaria = await Account.create({
+                numeroCuenta: '3000000001',
+                usuarioId: clientePrueba._id,
+                tipo: 'Monetaria',
+                moneda: 'USD',
+                saldo: 4200.50,
+                limiteTransferenciaDiario: 5000,
+                isFavorite: false,
+                estado: 'Activa'
+            });
+
+            await Card.create({
+                numeroTarjeta: '4111111111111111',
+                usuarioId: clientePrueba._id,
+                cuentaVinculadaId: accMonetaria._id,
+                tipo: 'Debito Fisica',
+                cvv: '123',
+                fechaExpiracion: '12/28',
+                configuraciones: {
+                    bloqueada: false,
+                    comprasInternacionales: true
+                }
+            });
+
+            await Card.create({
+                numeroTarjeta: '5111111111111111',
+                usuarioId: clientePrueba._id,
+                tipo: 'Credito',
+                limiteCredito: 10000,
+                saldoUtilizado: 2350.25,
+                fechaCorte: 15,
+                fechaPago: 5,
+                cvv: '456',
+                fechaExpiracion: '10/27',
+                configuraciones: {
+                    bloqueada: false,
+                    comprasInternacionales: true
+                }
+            });
+            console.log('✅ Cuentas y tarjetas creadas de prueba para cliente@bik.com.');
+        }
+
         console.log('🔑 Contraseña universal: Password123!');
         
-        process.exit();
+        if (process.argv[1] && process.argv[1].endsWith('seeder.js')) {
+            process.exit(0);
+        }
     } catch (error) {
         console.error('❌ Error en el DataSeeder:', error);
-        process.exit(1);
+        if (process.argv[1] && process.argv[1].endsWith('seeder.js')) {
+            process.exit(1);
+        } else {
+            throw error;
+        }
     }
 };
 
-seedData();
+// Only run automatically if executed directly
+if (process.argv[1] && process.argv[1].endsWith('seeder.js')) {
+    seedData();
+}

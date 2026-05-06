@@ -59,3 +59,16 @@ export const toggleCardFreeze = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+/**
+ * Obtiene el listado completo de tarjetas asociadas a un identificador de usuario.
+ */
+export const getUserCards = async (req, res) => {
+    try {
+        const { usuarioId } = req.params;
+        const cards = await Card.find({ usuarioId });
+        res.status(200).json({ status: 'success', data: cards });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};

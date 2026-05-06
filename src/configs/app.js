@@ -14,7 +14,7 @@ import insuranceRoutes from '../modules/insurance/insurance.routes.js';
 import notificationRoutes from '../modules/notifications/notification.routes.js';
 import documentRoutes from '../modules/documents/document.routes.js';
 import auditRoutes from '../modules/audit/audit.routes.js';
-
+import contactRoutes from '../modules/contacts/contact.routes.js';
 import { setupSwagger } from './swagger.js';
 
 const app = express();
@@ -33,7 +33,6 @@ app.use(morgan('dev'));
 
 /**
  * Registro de todas las rutas del ecosistema BIK.
- * Los módulos administrativos integran internamente el middleware de auditoría.
  */
 app.use('/api/users', userRoutes);
 app.use('/api/accounts', accountRoutes);
@@ -46,6 +45,7 @@ app.use('/api/insurance', insuranceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/contacts', contactRoutes); // Nueva ruta registrada
 
 setupSwagger(app);
 
@@ -55,7 +55,7 @@ setupSwagger(app);
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'success',
-        message: 'BIK Server Admin - Sistema Integral Operativo 🛡️'
+        message: 'BIK Server Admin - Sistema Integral Operativo'
     });
 });
 

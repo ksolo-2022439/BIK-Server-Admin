@@ -80,3 +80,23 @@ export const updateTransferLimit = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+/**
+ * Alterna el estado de cuenta favorita.
+ */
+export const toggleFavoriteAccount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const account = await Account.findById(id);
+        if (!account) {
+            return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
+        }
+
+        account.isFavorite = !account.isFavorite;
+        await account.save();
+        
+        res.status(200).json({ status: 'success', data: account });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};

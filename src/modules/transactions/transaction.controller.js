@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Transaction from './transaction.model.js';
 import Account from '../accounts/account.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Ejecuta una transferencia interna entre cuentas de Banco Informático Kinal utilizando transacciones atómicas.
@@ -207,14 +208,29 @@ export const executeInternationalTransfer = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { cuentaOrigenId, monto, swift, iban, beneficiario, descripcion } = req.body;
-        const comision = monto * 0.05; 
+        const { 
+            cuentaOrigenId, 
+            monto, 
+            descripcion, 
+            internationalDetails 
+        } = req.body;
+
+        if (!internationalDetails || !internationalDetails.swiftBic || !internationalDetails.bancoDestino || !internationalDetails.cuentaIban || !internationalDetails.nombreBeneficiario) {
+            throw new Error('Faltan datos obligatorios para la transferencia internacional (SWIFT, Banco, Cuenta o Beneficiario).');
+        }
+
+        const comision = 35;
+        
         const montoTotal = monto + comision;
 
         const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
 
-        if (!cuentaOrigen || cuentaOrigen.saldo < montoTotal) {
-            throw new Error('Fondos insuficientes para cubrir el monto y la comisión internacional.');
+        if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
+            throw new Error('Cuenta de origen no válida o inactiva.');
+        }
+
+        if (cuentaOrigen.saldo < montoTotal) {
+            throw new Error(`Fondos insuficientes para cubrir el monto (${monto}) y la comisión internacional (${comision}).`);
         }
 
         cuentaOrigen.saldo -= montoTotal;
@@ -222,16 +238,28 @@ export const executeInternationalTransfer = async (req, res) => {
 
         const transaction = new Transaction({
             cuentaOrigenId,
+            cuentaDestinoId: null, // El destino está fuera de BIK
             monto,
             tipo: 'Transferencia_Internacional',
-            descripcion: `SWIFT: ${swift} | IBAN: ${iban} | Beneficiario: ${beneficiario} | ${descripcion}`,
+            descripcion: descripcion || `Transferencia Internacional a ${internationalDetails.nombreBeneficiario}`,
+            internationalDetails: {
+                ...internationalDetails,
+                comisionAplicada: comision
+            },
             estado: 'En_Proceso'
         });
 
         await transaction.save({ session });
+
         await session.commitTransaction();
 
-        res.status(200).json({ status: 'success', data: transaction, comisionAplicada: comision });
+        res.status(200).json({ 
+            status: 'success', 
+            data: transaction, 
+            comisionAplicada: comision,
+            mensaje: 'Transferencia SWIFT iniciada. Los fondos pueden tardar entre 2 y 5 días hábiles en acreditarse.'
+        });
+
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });

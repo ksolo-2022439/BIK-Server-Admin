@@ -7,6 +7,7 @@ const accountSchema = new mongoose.Schema({
     moneda: { type: String, enum: ['GTQ', 'USD'], default: 'GTQ' },
     saldo: { type: Number, default: 0, min: 0 }, // Saldo real
     limiteTransferenciaDiario: { type: Number, default: 5000 },
+    isFavorite: { type: Boolean, default: false },
     estado: { 
         type: String, 
         enum: ['Activa', 'Bloqueada', 'Cancelada'], 

@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
     fotoRostroUrl: { type: String, required: true },
     
     ingresosMensuales: { type: Number, default: 0 },
+    passwordHash: { type: String, select: false },
     estado: { 
         type: String, 
         enum: ['Activo', 'Suspendido', 'En Verificacion'], 

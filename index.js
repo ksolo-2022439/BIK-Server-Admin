@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import app from './src/configs/app.js';
 import { connectDB } from './src/configs/db.js';
 import { initCronJobs } from './src/configs/cron.js';
+import { seedData } from './seeder.js';
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ dotenv.config();
 const startServer = async () => {
     try {
         await connectDB();
+        await seedData();
         initCronJobs();
         
         const PORT = process.env.PORT || 3000;
