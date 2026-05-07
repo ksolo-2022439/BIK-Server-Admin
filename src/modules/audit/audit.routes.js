@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getAuditLogs } from './audit.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
-import { isAdmin } from '../../middlewares/validate-roles.js';
+import { hasRole } from '../../middlewares/validate-roles.js';
 
 const router = Router();
 
@@ -28,6 +28,6 @@ router.use(validateJWT);
  *       403:
  *         description: Acceso denegado (Solo Administradores).
  */
-router.get('/logs', isAdmin, getAuditLogs);
+router.get('/logs', hasRole('Administrador'), getAuditLogs);
 
 export default router;

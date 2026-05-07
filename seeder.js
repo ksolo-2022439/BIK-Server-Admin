@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import User from './src/modules/users/user.model.js';
 import Account from './src/modules/accounts/account.model.js';
 import Card from './src/modules/cards/card.model.js';
+import Currency from './src/modules/currency/currency.model.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -59,6 +60,70 @@ export const seedData = async () => {
                 ingresosMensuales: 8000,
                 estado: "Activo",
                 rol: "Cliente"
+            },
+            {
+                nombres: "María",
+                apellidos: "González",
+                dpi: "4444555566667",
+                fechaNacimiento: new Date("1988-03-20"),
+                direccion: { departamento: "Guatemala", municipio: "Guatemala", zona: "4", detalle: "Oficina Central" },
+                telefono: "33445566",
+                email: "gestiones@bik.com",
+                passwordHash,
+                fotoDpiAdelanteUrl: "https://bik.com/uploads/gestiones_front.png",
+                fotoDpiAtrasUrl: "https://bik.com/uploads/gestiones_back.png",
+                fotoRostroUrl: "https://bik.com/uploads/gestiones_face.png",
+                ingresosMensuales: 12000,
+                estado: "Activo",
+                rol: "Admin_Gestiones"
+            },
+            {
+                nombres: "Carlos",
+                apellidos: "Ramírez",
+                dpi: "5555666677778",
+                fechaNacimiento: new Date("1995-07-10"),
+                direccion: { departamento: "Guatemala", municipio: "Guatemala", zona: "7", detalle: "Call Center" },
+                telefono: "44556677",
+                email: "soporte@bik.com",
+                passwordHash,
+                fotoDpiAdelanteUrl: "https://bik.com/uploads/soporte_front.png",
+                fotoDpiAtrasUrl: "https://bik.com/uploads/soporte_back.png",
+                fotoRostroUrl: "https://bik.com/uploads/soporte_face.png",
+                ingresosMensuales: 8500,
+                estado: "Activo",
+                rol: "Soporte_Remoto"
+            },
+            {
+                nombres: "Ana",
+                apellidos: "López",
+                dpi: "6666777788889",
+                fechaNacimiento: new Date("1991-11-25"),
+                direccion: { departamento: "Guatemala", municipio: "Guatemala", zona: "1", detalle: "Agencia Central" },
+                telefono: "55667788",
+                email: "presencial@bik.com",
+                passwordHash,
+                fotoDpiAdelanteUrl: "https://bik.com/uploads/presencial_front.png",
+                fotoDpiAtrasUrl: "https://bik.com/uploads/presencial_back.png",
+                fotoRostroUrl: "https://bik.com/uploads/presencial_face.png",
+                ingresosMensuales: 9000,
+                estado: "Activo",
+                rol: "Soporte_Presencial"
+            },
+            {
+                nombres: "Pedro",
+                apellidos: "Martínez",
+                dpi: "7777888899990",
+                fechaNacimiento: new Date("1993-09-05"),
+                direccion: { departamento: "Guatemala", municipio: "Guatemala", zona: "1", detalle: "Agencia Central Ventanilla 1" },
+                telefono: "66778899",
+                email: "cajero@bik.com",
+                passwordHash,
+                fotoDpiAdelanteUrl: "https://bik.com/uploads/cajero_front.png",
+                fotoDpiAtrasUrl: "https://bik.com/uploads/cajero_back.png",
+                fotoRostroUrl: "https://bik.com/uploads/cajero_face.png",
+                ingresosMensuales: 7500,
+                estado: "Activo",
+                rol: "Cajero"
             }
         ];
 
@@ -138,6 +203,19 @@ export const seedData = async () => {
                 }
             });
             console.log('✅ Cuentas y tarjetas creadas de prueba para cliente@bik.com.');
+        }
+
+        // Sembrar tasas de cambio si no existen
+        const existingRates = await Currency.countDocuments();
+        if (existingRates === 0) {
+            await Currency.create({
+                monedaBase: 'USD',
+                monedaDestino: 'GTQ',
+                tasaCompra: 7.75,
+                tasaVenta: 7.95,
+                fechaActualizacion: new Date()
+            });
+            console.log('✅ Tasas de cambio USD/GTQ creadas (Compra: 7.75, Venta: 7.95).');
         }
 
         console.log('🔑 Contraseña universal: Password123!');
