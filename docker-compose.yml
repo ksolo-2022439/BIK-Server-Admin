@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: bik-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  auth-service:
+    build: 
+      context: ../BIK-Auth-Service
+      dockerfile: Dockerfile
+    container_name: bik-auth-service
+    ports:
+      - "5213:8080"
+    environment:
+      - MongoDbSettings__ConnectionString=mongodb://mongodb:27017
+      - MongoDbSettings__DatabaseName=bik_core_db
+      - JwtSettings__Secret=TuClaveSecretaSuperSeguraParaValidarTokensDeCSharp
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  server-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bik-server-admin
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/bik_core_db
+      - AUTH_SERVICE_URL=http://auth-service:8080
+      - CLIENT_URL=http://localhost:5173
+      - JWT_SECRET=TuClaveSecretaSuperSeguraParaValidarTokensDeCSharp
+    depends_on:
+      - mongodb
+      - auth-service
+    restart: unless-stopped
+
+  client-user:
+    build:
+      context: ../BIK-Client-User
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3000/api
+        - VITE_AUTH_API_URL=http://localhost:5213
+    container_name: bik-client-user
+    ports:
+      - "5173:80"
+    depends_on:
+      - server-admin
+      - auth-service
+    restart: unless-stopped
+
+  client-admin:
+    build:
+      context: ../BIK-Client-Admin
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://localhost:3000/api
+        - VITE_AUTH_API_URL=http://localhost:5213
+    container_name: bik-client-admin
+    ports:
+      - "5174:80"
+    depends_on:
+      - server-admin
+      - auth-service
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:

@@ -1,74 +1,21 @@
-# BIK Server Admin
+# BIK - Server Admin (Backend Core)
 
-Microservicio principal que actúa como API Gateway y panel administrativo para el Banco Informático Kinal (BIK). Desarrollado con Node.js y Express, gestiona la autenticación de usuarios, administración de cuentas y orquesta las peticiones hacia los demás servicios financieros.
+Servidor principal de la plataforma bancaria BIK (Banco Informático Kinal). Actúa como el núcleo de la lógica de negocios, interactuando con la base de datos de MongoDB, resolviendo peticiones de ambas interfaces frontend (Usuario y Administrador) y coordinándose con el microservicio de autenticación.
 
-## Configuración de Entorno (.env)
+## Módulos Principales
+- **Gestión de Usuarios y Roles**: Administración de clientes y roles corporativos.
+- **Transacciones y Cuentas**: Transferencias internas, externas (ACH), remesas e historial atómico de movimientos.
+- **Divisas**: Conversión y negociación de múltiples monedas (GTQ y USD) con tasas de cambio dinámicas en tiempo real.
+- **Seguridad y Auditoría**: Registro centralizado de todas las peticiones a la API.
 
-Crea un archivo `.env` en la raíz de la carpeta `server-admin` con las siguientes variables requeridas para su ejecución aislada o contenedorizada:
+## Tecnologías
+- Node.js & Express
+- MongoDB (Mongoose)
+- Swagger (Documentación de API en `/api-docs`)
 
-```env
-PORT=3001
-URI_MONGODB=mongodb://mongo-db:27017/bik_db
-SECRET_KEY=TuClaveSuperSecretaBIK2026
-CORE_BANKING_URL=http://core-banking:8080
-CURRENCY_SERVICE_URL=http://currency-service:3002
-```
-
-## Ejecución del Proyecto
-
-La forma recomendada de ejecutar el servicio es utilizando **Docker Compose** junto con todo el ecosistema de microservicios.
-
-Desde la **raíz del proyecto** (donde se encuentra el archivo `docker-compose.yml`), ejecuta:
-
+## Configuración y Despliegue
+Este repositorio contiene el archivo `docker-compose.yml` maestro que orquesta todos los contenedores del ecosistema BIK.
+Para iniciar todo el sistema localmente, ejecuta:
 ```bash
-docker compose up -d --build
+docker-compose up -d --build
 ```
-
-Esto iniciará el contenedor `bik-serveradmin` y el servicio quedará disponible en:
-
-```
-http://localhost:3001
-```
-
----
-
-## Uso de la Colección de Postman
-
-Las pruebas del API se realizan mediante la colección **BIK-Postman_Collection.json** incluida en el proyecto.
-
-### Pasos
-
-1. Importa el archivo JSON en **Postman**.
-2. Ve a **Variables de la Colección**.
-3. Verifica que la variable `admin_base_url` tenga el valor:
-
-```
-http://localhost:3001/BIK/v1
-```
-
-4. Ejecuta el endpoint:
-
-```
-Autenticación > Iniciar sesión
-```
-
-5. El script de **Tests** guardará automáticamente el **JWT Token** en la variable:
-
-```
-{{token}}
-```
-
-6. Las demás peticiones utilizarán automáticamente ese token gracias a la configuración **Bearer Token**.
-
----
-
-## Funcionalidades principales
-
-* Autenticación de usuarios mediante **JWT**.
-* Administración de usuarios del sistema.
-* Gestión de cuentas bancarias.
-* Comunicación con el microservicio **Core Banking**.
-* Integración con el **Currency Service** para conversiones de moneda.
-* Punto central de acceso para los demás servicios del ecosistema.
-
----
