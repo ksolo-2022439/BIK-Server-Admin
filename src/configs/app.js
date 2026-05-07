@@ -15,13 +15,32 @@ import notificationRoutes from '../modules/notifications/notification.routes.js'
 import documentRoutes from '../modules/documents/document.routes.js';
 import auditRoutes from '../modules/audit/audit.routes.js';
 import contactRoutes from '../modules/contacts/contact.routes.js';
+import adminRoutes from '../modules/admin/admin.routes.js';
+import requestRoutes from '../modules/requests/request.routes.js';
 import { setupSwagger } from './swagger.js';
 
 const app = express();
 
 app.use(helmet());
+
+/**
+ * Configuración CORS multi-origen.
+ * Acepta peticiones tanto del Client-User (5173) como del Client-Admin (5174).
+ */
+const allowedOrigins = [
+    process.env.CLIENT_URL || 'http://localhost:5173',
+    process.env.ADMIN_CLIENT_URL || 'http://localhost:5174'
+];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+        // Permitir peticiones sin origen (e.g. Postman, curl)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Origen no permitido por CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -45,7 +64,9 @@ app.use('/api/insurance', insuranceRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/audit', auditRoutes);
-app.use('/api/contacts', contactRoutes); // Nueva ruta registrada
+app.use('/api/contacts', contactRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/requests', requestRoutes);
 
 setupSwagger(app);
 

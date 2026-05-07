@@ -13,6 +13,16 @@ const requestSchema = new mongoose.Schema({
         enum: ['Pendiente', 'En_Proceso', 'Completada', 'Rechazada'],
         default: 'Pendiente'
     },
+    prioridad: {
+        type: String,
+        enum: ['Normal', 'Alta', 'Urgente'],
+        default: 'Normal'
+    },
+    notas: [{
+        autor: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        texto: { type: String },
+        fecha: { type: Date, default: Date.now }
+    }],
     fechaSolicitud: { type: Date, default: Date.now },
     fechaResolucion: { type: Date }
 });
