@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Transaction from './transaction.model.js';
 import Account from '../accounts/account.model.js';
 import User from '../users/user.model.js';
+import Currency from '../currency/currency.model.js';
 
 /**
  * Ejecuta una transferencia interna entre cuentas de Banco Informático Kinal utilizando transacciones atómicas.
@@ -12,7 +13,7 @@ export const executeInternalTransfer = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { cuentaOrigenId, cuentaDestinoId, monto, descripcion } = req.body;
+        const { cuentaOrigenId, cuentaDestinoId, monto, descripcion, monedaTransferencia } = req.body;
 
         const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
         const cuentaDestino = await Account.findById(cuentaDestinoId).session(session);
@@ -25,16 +26,55 @@ export const executeInternalTransfer = async (req, res) => {
             throw new Error('Ambas cuentas deben estar activas para realizar la transferencia.');
         }
 
-        if (cuentaOrigen.saldo < monto) {
+        const monedaEnvio = monedaTransferencia || cuentaOrigen.moneda || 'GTQ';
+
+        // Manejo de conversión entre monedas diferentes
+        let montoAcreditar = monto;
+        let montoDebitar = monto;
+        let tasaCambioUsada = null;
+        let descripcionFinal = descripcion;
+
+        if (cuentaOrigen.moneda !== cuentaDestino.moneda) {
+            const rate = await Currency.findOne({ monedaBase: 'USD', monedaDestino: 'GTQ' });
+            if (!rate) throw new Error('No hay tasa de cambio disponible.');
+
+            if (cuentaOrigen.moneda === 'GTQ' && cuentaDestino.moneda === 'USD') {
+                if (monedaEnvio === 'GTQ') {
+                    montoAcreditar = monto / rate.tasaVenta;
+                    montoDebitar = monto;
+                    tasaCambioUsada = rate.tasaVenta;
+                    descripcionFinal = `${descripcion || 'Transferencia'} [Q${monto.toFixed(2)} → $${montoAcreditar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+                } else if (monedaEnvio === 'USD') {
+                    montoAcreditar = monto;
+                    montoDebitar = monto * rate.tasaVenta;
+                    tasaCambioUsada = rate.tasaVenta;
+                    descripcionFinal = `${descripcion || 'Transferencia'} [$${monto.toFixed(2)} cobrados como Q${montoDebitar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+                }
+            } else if (cuentaOrigen.moneda === 'USD' && cuentaDestino.moneda === 'GTQ') {
+                if (monedaEnvio === 'USD') {
+                    montoAcreditar = monto * rate.tasaCompra;
+                    montoDebitar = monto;
+                    tasaCambioUsada = rate.tasaCompra;
+                    descripcionFinal = `${descripcion || 'Transferencia'} [$${monto.toFixed(2)} → Q${montoAcreditar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+                } else if (monedaEnvio === 'GTQ') {
+                    montoAcreditar = monto;
+                    montoDebitar = monto / rate.tasaCompra;
+                    tasaCambioUsada = rate.tasaCompra;
+                    descripcionFinal = `${descripcion || 'Transferencia'} [Q${monto.toFixed(2)} cobrados como $${montoDebitar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+                }
+            }
+        }
+
+        if (cuentaOrigen.saldo < montoDebitar) {
             throw new Error('Fondos insuficientes.');
         }
 
-        if (monto > cuentaOrigen.limiteTransferenciaDiario) {
+        if (montoDebitar > cuentaOrigen.limiteTransferenciaDiario) {
             throw new Error('El monto supera el límite de transferencia diario.');
         }
 
-        cuentaOrigen.saldo -= monto;
-        cuentaDestino.saldo += monto;
+        cuentaOrigen.saldo -= montoDebitar;
+        cuentaDestino.saldo += montoAcreditar;
 
         await cuentaOrigen.save({ session });
         await cuentaDestino.save({ session });
@@ -42,16 +82,20 @@ export const executeInternalTransfer = async (req, res) => {
         const transaction = new Transaction({
             cuentaOrigenId,
             cuentaDestinoId,
-            monto,
+            monto: montoDebitar,
             tipo: 'Transferencia_Local',
-            descripcion,
+            descripcion: descripcionFinal,
             estado: 'Completada'
         });
 
         await transaction.save({ session });
 
         await session.commitTransaction();
-        res.status(200).json({ status: 'success', data: transaction });
+        res.status(200).json({ 
+            status: 'success', 
+            data: transaction,
+            ...(tasaCambioUsada && { tasaCambio: tasaCambioUsada, montoAcreditado: montoAcreditar })
+        });
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
@@ -69,7 +113,7 @@ export const executeACHTransfer = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { cuentaOrigenId, monto, descripcion, achDetails } = req.body;
+        const { cuentaOrigenId, monto, descripcion, achDetails, monedaTransferencia } = req.body;
 
         const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
 
@@ -77,19 +121,39 @@ export const executeACHTransfer = async (req, res) => {
             throw new Error('Cuenta de origen no válida o inactiva.');
         }
 
-        if (cuentaOrigen.saldo < monto) {
+        const monedaEnvio = monedaTransferencia || 'GTQ'; // Por defecto ACH es en Quetzales
+        let montoDebitar = monto;
+        let tasaCambioUsada = null;
+        let descripcionFinal = descripcion;
+
+        if (cuentaOrigen.moneda !== monedaEnvio) {
+            const rate = await Currency.findOne({ monedaBase: 'USD', monedaDestino: 'GTQ' });
+            if (!rate) throw new Error('No hay tasa de cambio disponible.');
+
+            if (cuentaOrigen.moneda === 'USD' && monedaEnvio === 'GTQ') {
+                montoDebitar = monto / rate.tasaCompra;
+                tasaCambioUsada = rate.tasaCompra;
+                descripcionFinal = `${descripcion || 'Transferencia ACH'} [Q${monto.toFixed(2)} cobrados como $${montoDebitar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+            } else if (cuentaOrigen.moneda === 'GTQ' && monedaEnvio === 'USD') {
+                montoDebitar = monto * rate.tasaVenta;
+                tasaCambioUsada = rate.tasaVenta;
+                descripcionFinal = `${descripcion || 'Transferencia ACH'} [$${monto.toFixed(2)} cobrados como Q${montoDebitar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+            }
+        }
+
+        if (cuentaOrigen.saldo < montoDebitar) {
             throw new Error('Fondos insuficientes.');
         }
 
-        cuentaOrigen.saldo -= monto;
+        cuentaOrigen.saldo -= montoDebitar;
         await cuentaOrigen.save({ session });
 
         const transaction = new Transaction({
             cuentaOrigenId,
             cuentaDestinoId: null,
-            monto,
+            monto: montoDebitar,
             tipo: 'Transferencia_ACH',
-            descripcion,
+            descripcion: descripcionFinal,
             achDetails,
             estado: 'En_Proceso'
         });
@@ -97,7 +161,11 @@ export const executeACHTransfer = async (req, res) => {
         await transaction.save({ session });
 
         await session.commitTransaction();
-        res.status(200).json({ status: 'success', data: transaction });
+        res.status(200).json({ 
+            status: 'success', 
+            data: transaction,
+            ...(tasaCambioUsada && { tasaCambio: tasaCambioUsada, montoEnviado: monto, monedaEnviada: monedaEnvio })
+        });
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
@@ -108,14 +176,17 @@ export const executeACHTransfer = async (req, res) => {
 
 /**
  * Procesa un depósito en efectivo realizado por un administrador en ventanilla.
- * Incrementa el saldo de la cuenta destino sin requerir una cuenta de origen.
+ * Soporta depósitos multi-moneda:
+ * - Si la cuenta es USD y se deposita en GTQ, convierte usando tasa de compra.
+ * - Si la cuenta es USD y se deposita en USD, acredita directamente.
+ * - Si la cuenta es GTQ, acredita directamente en GTQ.
  */
 export const executeCashDeposit = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-        const { cuentaDestinoId, monto, descripcion } = req.body;
+        const { cuentaDestinoId, monto, descripcion, monedaDeposito } = req.body;
         const referenciaCajero = req.user.uid;
 
         const cuentaDestino = await Account.findById(cuentaDestinoId).session(session);
@@ -124,15 +195,39 @@ export const executeCashDeposit = async (req, res) => {
             throw new Error('Cuenta de destino no válida o inactiva.');
         }
 
-        cuentaDestino.saldo += monto;
+        let montoAcreditar = monto;
+        let tasaCambioUsada = null;
+        let descripcionFinal = descripcion || 'Depósito en efectivo en ventanilla';
+
+        const monedaRecibida = monedaDeposito || cuentaDestino.moneda || 'GTQ';
+
+        // Conversión si la moneda del depósito no coincide con la de la cuenta
+        if (monedaRecibida !== cuentaDestino.moneda) {
+            const rate = await Currency.findOne({ monedaBase: 'USD', monedaDestino: 'GTQ' });
+            if (!rate) throw new Error('No hay tasa de cambio disponible para realizar la conversión.');
+
+            if (monedaRecibida === 'GTQ' && cuentaDestino.moneda === 'USD') {
+                // Cliente deposita GTQ en cuenta USD → convertir a USD usando tasaVenta
+                montoAcreditar = monto / rate.tasaVenta;
+                tasaCambioUsada = rate.tasaVenta;
+                descripcionFinal = `${descripcionFinal} [Q${monto.toFixed(2)} → $${montoAcreditar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+            } else if (monedaRecibida === 'USD' && cuentaDestino.moneda === 'GTQ') {
+                // Cliente deposita USD en cuenta GTQ → convertir a GTQ usando tasaCompra
+                montoAcreditar = monto * rate.tasaCompra;
+                tasaCambioUsada = rate.tasaCompra;
+                descripcionFinal = `${descripcionFinal} [$${monto.toFixed(2)} → Q${montoAcreditar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+            }
+        }
+
+        cuentaDestino.saldo += montoAcreditar;
         await cuentaDestino.save({ session });
 
         const transaction = new Transaction({
             cuentaOrigenId: null,
             cuentaDestinoId,
-            monto,
+            monto: montoAcreditar,
             tipo: 'Deposito_Efectivo',
-            descripcion,
+            descripcion: descripcionFinal,
             estado: 'Completada',
             referenciaCajero
         });
@@ -140,7 +235,15 @@ export const executeCashDeposit = async (req, res) => {
         await transaction.save({ session });
 
         await session.commitTransaction();
-        res.status(200).json({ status: 'success', data: transaction });
+        res.status(200).json({ 
+            status: 'success', 
+            data: transaction,
+            montoRecibido: monto,
+            monedaRecibida,
+            montoAcreditado: montoAcreditar,
+            monedaCuenta: cuentaDestino.moneda,
+            ...(tasaCambioUsada && { tasaCambio: tasaCambioUsada })
+        });
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
@@ -158,7 +261,7 @@ export const executeMobileTransfer = async (req, res) => {
     session.startTransaction();
 
     try {
-        const { monto, telefonoDestino, descripcion } = req.body;
+        const { monto, telefonoDestino, descripcion, monedaTransferencia } = req.body;
         const usuarioDestino = await User.findOne({ telefono: telefonoDestino });
 
         if (!usuarioDestino) {
@@ -166,14 +269,58 @@ export const executeMobileTransfer = async (req, res) => {
         }
 
         const cuentaDestino = await Account.findOne({ usuarioId: usuarioDestino._id, tipo: 'Monetaria' }).session(session);
-        const cuentaOrigen = await Account.findOne({ usuarioId: req.user.uid, saldo: { $gte: monto } }).session(session);
+        // Quitamos la restricción del saldo en la búsqueda de origen porque ahora el débito puede cambiar si hay conversión
+        const cuentaOrigen = await Account.findOne({ usuarioId: req.user.uid, tipo: 'Monetaria' }).session(session);
 
         if (!cuentaOrigen || !cuentaDestino) {
             throw new Error('Error en la vinculación de cuentas para transferencia móvil.');
         }
 
-        cuentaOrigen.saldo -= monto;
-        cuentaDestino.saldo += monto;
+        const monedaEnvio = monedaTransferencia || cuentaOrigen.moneda || 'GTQ';
+
+        // Manejo de conversión
+        let montoAcreditar = monto;
+        let montoDebitar = monto;
+        let tasaCambioUsada = null;
+        let descripcionFinal = `Transferencia Móvil a ${telefonoDestino}: ${descripcion}`;
+
+        if (cuentaOrigen.moneda !== cuentaDestino.moneda) {
+            const rate = await Currency.findOne({ monedaBase: 'USD', monedaDestino: 'GTQ' });
+            if (!rate) throw new Error('No hay tasa de cambio disponible.');
+
+            if (cuentaOrigen.moneda === 'GTQ' && cuentaDestino.moneda === 'USD') {
+                if (monedaEnvio === 'GTQ') {
+                    montoAcreditar = monto / rate.tasaVenta;
+                    montoDebitar = monto;
+                    tasaCambioUsada = rate.tasaVenta;
+                    descripcionFinal = `${descripcionFinal} [Q${monto.toFixed(2)} → $${montoAcreditar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+                } else if (monedaEnvio === 'USD') {
+                    montoAcreditar = monto;
+                    montoDebitar = monto * rate.tasaVenta;
+                    tasaCambioUsada = rate.tasaVenta;
+                    descripcionFinal = `${descripcionFinal} [$${monto.toFixed(2)} cobrados como Q${montoDebitar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+                }
+            } else if (cuentaOrigen.moneda === 'USD' && cuentaDestino.moneda === 'GTQ') {
+                if (monedaEnvio === 'USD') {
+                    montoAcreditar = monto * rate.tasaCompra;
+                    montoDebitar = monto;
+                    tasaCambioUsada = rate.tasaCompra;
+                    descripcionFinal = `${descripcionFinal} [$${monto.toFixed(2)} → Q${montoAcreditar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+                } else if (monedaEnvio === 'GTQ') {
+                    montoAcreditar = monto;
+                    montoDebitar = monto / rate.tasaCompra;
+                    tasaCambioUsada = rate.tasaCompra;
+                    descripcionFinal = `${descripcionFinal} [Q${monto.toFixed(2)} cobrados como $${montoDebitar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+                }
+            }
+        }
+
+        if (cuentaOrigen.saldo < montoDebitar) {
+            throw new Error('Fondos insuficientes para la transferencia móvil.');
+        }
+
+        cuentaOrigen.saldo -= montoDebitar;
+        cuentaDestino.saldo += montoAcreditar;
 
         await cuentaOrigen.save({ session });
         await cuentaDestino.save({ session });
@@ -181,16 +328,20 @@ export const executeMobileTransfer = async (req, res) => {
         const transaction = new Transaction({
             cuentaOrigenId: cuentaOrigen._id,
             cuentaDestinoId: cuentaDestino._id,
-            monto,
+            monto: montoDebitar,
             tipo: 'Transferencia_Movil',
-            descripcion: `Transferencia Móvil a ${telefonoDestino}: ${descripcion}`,
+            descripcion: descripcionFinal,
             estado: 'Completada'
         });
 
         await transaction.save({ session });
         await session.commitTransaction();
 
-        res.status(200).json({ status: 'success', data: transaction });
+        res.status(200).json({ 
+            status: 'success', 
+            data: transaction,
+            ...(tasaCambioUsada && { tasaCambio: tasaCambioUsada, montoAcreditado: montoAcreditar })
+        });
     } catch (error) {
         await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
@@ -212,16 +363,13 @@ export const executeInternationalTransfer = async (req, res) => {
             cuentaOrigenId, 
             monto, 
             descripcion, 
-            internationalDetails 
+            internationalDetails,
+            monedaTransferencia
         } = req.body;
 
         if (!internationalDetails || !internationalDetails.swiftBic || !internationalDetails.bancoDestino || !internationalDetails.cuentaIban || !internationalDetails.nombreBeneficiario) {
             throw new Error('Faltan datos obligatorios para la transferencia internacional (SWIFT, Banco, Cuenta o Beneficiario).');
         }
-
-        const comision = 35;
-        
-        const montoTotal = monto + comision;
 
         const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
 
@@ -229,8 +377,36 @@ export const executeInternationalTransfer = async (req, res) => {
             throw new Error('Cuenta de origen no válida o inactiva.');
         }
 
+        const monedaEnvio = monedaTransferencia || 'USD'; // Transferencias internacionales asumen USD
+        let montoDebitar = monto;
+        let tasaCambioUsada = null;
+        let descripcionFinal = descripcion || `Transferencia Internacional a ${internationalDetails.nombreBeneficiario}`;
+        
+        // Comisión internacional típica (en USD)
+        let comisionUsd = 35;
+        let comisionCobrada = comisionUsd;
+
+        if (cuentaOrigen.moneda !== monedaEnvio) {
+            const rate = await Currency.findOne({ monedaBase: 'USD', monedaDestino: 'GTQ' });
+            if (!rate) throw new Error('No hay tasa de cambio disponible.');
+
+            if (cuentaOrigen.moneda === 'GTQ' && monedaEnvio === 'USD') {
+                montoDebitar = monto * rate.tasaVenta;
+                comisionCobrada = comisionUsd * rate.tasaVenta;
+                tasaCambioUsada = rate.tasaVenta;
+                descripcionFinal = `${descripcionFinal} [$${monto.toFixed(2)} cobrados como Q${montoDebitar.toFixed(2)} @ TC ${rate.tasaVenta}]`;
+            } else if (cuentaOrigen.moneda === 'USD' && monedaEnvio === 'GTQ') {
+                montoDebitar = monto / rate.tasaCompra;
+                comisionCobrada = comisionUsd; // Comisión en USD
+                tasaCambioUsada = rate.tasaCompra;
+                descripcionFinal = `${descripcionFinal} [Q${monto.toFixed(2)} cobrados como $${montoDebitar.toFixed(2)} @ TC ${rate.tasaCompra}]`;
+            }
+        }
+
+        const montoTotal = montoDebitar + comisionCobrada;
+
         if (cuentaOrigen.saldo < montoTotal) {
-            throw new Error(`Fondos insuficientes para cubrir el monto (${monto}) y la comisión internacional (${comision}).`);
+            throw new Error(`Fondos insuficientes para cubrir el monto a enviar y la comisión internacional (${comisionCobrada.toFixed(2)} ${cuentaOrigen.moneda}).`);
         }
 
         cuentaOrigen.saldo -= montoTotal;
@@ -239,12 +415,12 @@ export const executeInternationalTransfer = async (req, res) => {
         const transaction = new Transaction({
             cuentaOrigenId,
             cuentaDestinoId: null, // El destino está fuera de BIK
-            monto,
+            monto: montoDebitar,
             tipo: 'Transferencia_Internacional',
-            descripcion: descripcion || `Transferencia Internacional a ${internationalDetails.nombreBeneficiario}`,
+            descripcion: descripcionFinal,
             internationalDetails: {
                 ...internationalDetails,
-                comisionAplicada: comision
+                comisionAplicada: comisionCobrada
             },
             estado: 'En_Proceso'
         });
@@ -256,8 +432,9 @@ export const executeInternationalTransfer = async (req, res) => {
         res.status(200).json({ 
             status: 'success', 
             data: transaction, 
-            comisionAplicada: comision,
-            mensaje: 'Transferencia SWIFT iniciada. Los fondos pueden tardar entre 2 y 5 días hábiles en acreditarse.'
+            comisionAplicada: comisionCobrada,
+            mensaje: 'Transferencia SWIFT iniciada. Los fondos pueden tardar entre 2 y 5 días hábiles en acreditarse.',
+            ...(tasaCambioUsada && { tasaCambio: tasaCambioUsada, montoEnviado: monto, monedaEnviada: monedaEnvio })
         });
 
     } catch (error) {

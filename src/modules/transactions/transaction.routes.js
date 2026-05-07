@@ -8,7 +8,7 @@ import {
     getPersonalFinances 
 } from './transaction.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
-import { isAdmin } from '../../middlewares/validate-roles.js';
+import { isAdmin, hasRole } from '../../middlewares/validate-roles.js';
 import { auditLogger } from '../../middlewares/audit-logger.js';
 
 const router = Router();
@@ -171,7 +171,7 @@ router.post('/international', executeInternationalTransfer);
  *       200:
  *         description: Depósito exitoso.
  */
-router.post('/deposit', isAdmin, executeCashDeposit);
+router.post('/deposit', hasRole('Cajero'), executeCashDeposit);
 
 /**
  * @swagger
