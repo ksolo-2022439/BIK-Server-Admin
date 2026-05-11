@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createAccount, getUserAccounts, updateAccountStatus, updateTransferLimit, toggleFavoriteAccount } from './account.controller.js';
+import { createAccount, getUserAccounts, updateAccountStatus, updateTransferLimit, toggleFavoriteAccount, freezeAccount } from './account.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin } from '../../middlewares/validate-roles.js';
 
@@ -128,6 +128,7 @@ router.patch('/:id/limits', updateTransferLimit);
  *         description: No se puede cancelar cuenta con fondos.
  */
 router.patch('/:id/status', isAdmin, updateAccountStatus);
+router.patch('/:id/freeze', freezeAccount);
 
 /**
  * @swagger

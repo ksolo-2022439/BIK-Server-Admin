@@ -1,4 +1,5 @@
 import Contact from './contact.model.js';
+import Account from '../accounts/account.model.js';
 
 /**
  * Registra un nuevo destinatario en la libreta de contactos del usuario.
@@ -6,6 +7,37 @@ import Contact from './contact.model.js';
  */
 export const createContact = async (req, res) => {
     try {
+        const { numeroCuenta, tipoDestinatario, banco } = req.body;
+
+        // Validación para cuentas internas BIK
+        if (tipoDestinatario === 'BIK') {
+            const accountExists = await Account.findOne({ numeroCuenta, estado: 'Activa' });
+            if (!accountExists) {
+                return res.status(404).json({ 
+                    status: 'error', 
+                    message: 'La cuenta BIK destino no existe o no se encuentra activa.' 
+                });
+            }
+        }
+
+        // Validación simulada para transferencias ACH
+        if (tipoDestinatario === 'ACH') {
+            // Simulación: Validamos que el número de cuenta tenga una longitud razonable
+            // y que el banco haya sido seleccionado.
+            if (!numeroCuenta || numeroCuenta.length < 8) {
+                return res.status(400).json({ 
+                    status: 'error', 
+                    message: 'El número de cuenta ACH no cumple con el formato requerido.' 
+                });
+            }
+            if (!banco) {
+                return res.status(400).json({ 
+                    status: 'error', 
+                    message: 'Debe especificar el banco destino para transferencias ACH.' 
+                });
+            }
+        }
+
         const newContact = new Contact({
             ...req.body,
             usuarioId: req.user.uid

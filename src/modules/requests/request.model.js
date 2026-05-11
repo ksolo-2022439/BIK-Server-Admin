@@ -4,7 +4,6 @@ const requestSchema = new mongoose.Schema({
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     tipoGestion: {
         type: String,
-        enum: ['Chequera', 'Reposicion_Tarjeta', 'Carta_Referencia', 'Actualizacion_Datos'],
         required: true
     },
     descripcion: { type: String, required: true },

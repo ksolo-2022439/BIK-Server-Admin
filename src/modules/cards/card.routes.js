@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requestCard, toggleCardFreeze, getUserCards } from './card.controller.js';
+import { requestCard, toggleCardFreeze, getUserCards, updateCardConfig } from './card.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 
 const router = Router();
@@ -69,25 +69,7 @@ router.post('/request', requestCard);
  *         description: Tarjeta no encontrada.
  */
 router.patch('/:id/freeze', toggleCardFreeze);
-
-/**
- * @swagger
- * /api/cards/user/{usuarioId}:
- *   get:
- *     summary: Obtener tarjetas del usuario
- *     tags: [Tarjetas]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: usuarioId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Tarjetas obtenidas correctamente.
- */
+router.patch('/:id', updateCardConfig);
 router.get('/user/:usuarioId', getUserCards);
 
 export default router;

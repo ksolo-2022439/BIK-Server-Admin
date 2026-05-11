@@ -10,7 +10,7 @@ const accountSchema = new mongoose.Schema({
     isFavorite: { type: Boolean, default: false },
     estado: { 
         type: String, 
-        enum: ['Activa', 'Bloqueada', 'Cancelada'], 
+        enum: ['Activa', 'Bloqueada', 'Cancelada', 'Congelada'], 
         default: 'Activa' 
     }
 }, {

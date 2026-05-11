@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createUser, getUserByDpi, getUserById, updateUser, updateUserStatus } from './user.controller.js';
+import { createUser, getUserByDpi, getUserById, updateUser, updateUserStatus, changePassword } from './user.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin } from '../../middlewares/validate-roles.js';
 
@@ -174,5 +174,6 @@ router.put('/:id/update', updateUser);
  *         description: Estado actualizado.
  */
 router.patch('/:id/status', isAdmin, updateUserStatus);
+router.put('/change-password', changePassword);
 
 export default router;

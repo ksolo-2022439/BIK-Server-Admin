@@ -90,6 +90,28 @@ export const updateUserStatus = async (req, res) => {
         
         res.status(200).json({ status: 'success', data: updatedUser });
     } catch (error) {
+        res.status(200).json({ status: 'success', data: updatedUser });
+    } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+// Cambiar contraseña (Llamada al Auth-Service)
+export const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const userId = req.user.uid;
+
+        const authResponse = await axios.put(process.env.AUTH_SERVICE_URL + '/api/auth/change-password', {
+            userId,
+            currentPassword,
+            newPassword
+        });
+
+        res.status(200).json(authResponse.data);
+    } catch (error) {
+        const status = error.response?.status || 500;
+        const message = error.response?.data?.message || error.message;
+        res.status(status).json({ status: 'error', message });
     }
 };

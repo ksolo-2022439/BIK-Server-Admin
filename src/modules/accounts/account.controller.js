@@ -67,6 +67,32 @@ export const updateAccountStatus = async (req, res) => {
 };
 
 /**
+ * Permite al usuario congelar su propia cuenta por seguridad.
+ */
+export const freezeAccount = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const account = await Account.findById(id);
+
+        if (!account) {
+            return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
+        }
+
+        // Verificar que la cuenta pertenezca al usuario del token
+        if (account.usuarioId.toString() !== req.user.uid) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para modificar esta cuenta.' });
+        }
+
+        account.estado = account.estado === 'Congelada' ? 'Activa' : 'Congelada';
+        await account.save();
+
+        res.status(200).json({ status: 'success', data: account });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+/**
  * Actualiza el límite máximo permitido para transferencias diarias de una cuenta.
  */
 export const updateTransferLimit = async (req, res) => {

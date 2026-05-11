@@ -56,6 +56,32 @@ export const toggleCardFreeze = async (req, res) => {
 
         res.status(200).json({ status: 'success', data: card });
     } catch (error) {
+        res.status(200).json({ status: 'success', data: card });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+/**
+ * Actualiza configuraciones generales de la tarjeta (Bloqueo, Compras Internacionales, etc.)
+ */
+export const updateCardConfig = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { configuraciones } = req.body;
+
+        const updatedCard = await Card.findByIdAndUpdate(
+            id, 
+            { configuraciones }, 
+            { new: true }
+        );
+
+        if (!updatedCard) {
+            return res.status(404).json({ status: 'error', message: 'Tarjeta no encontrada.' });
+        }
+
+        res.status(200).json({ status: 'success', data: updatedCard });
+    } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
