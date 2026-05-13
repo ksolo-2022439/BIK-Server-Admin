@@ -23,7 +23,8 @@ const requestSchema = new mongoose.Schema({
         fecha: { type: Date, default: Date.now }
     }],
     fechaSolicitud: { type: Date, default: Date.now },
-    fechaResolucion: { type: Date }
+    fechaResolucion: { type: Date },
+    montoSolicitado: { type: Number }
 });
 
 export default mongoose.model('Request', requestSchema);

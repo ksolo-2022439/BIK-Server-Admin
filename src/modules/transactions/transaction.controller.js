@@ -423,3 +423,51 @@ export const getPersonalFinances = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
+
+/**
+ * Obtiene el historial de transacciones del usuario autenticado.
+ * Permite filtrar por tipo de transacción (ej. 'Remesa') o por ID de cuenta.
+ */
+export const getUserTransactions = async (req, res) => {
+    try {
+        const { tipo, accountId, limit = 50 } = req.query;
+        const userId = req.user.uid;
+
+        // 1. Obtener todas las cuentas del usuario
+        const userAccounts = await Account.find({ usuarioId: userId }).distinct('_id');
+
+        // 2. Construir la consulta
+        const query = {
+            $or: [
+                { cuentaOrigenId: { $in: userAccounts } },
+                { cuentaDestinoId: { $in: userAccounts } }
+            ]
+        };
+
+        if (tipo) query.tipo = tipo;
+        if (accountId) {
+            // Verificar que la cuenta pertenece al usuario
+            if (!userAccounts.some(id => id.toString() === accountId)) {
+                return res.status(403).json({ status: 'error', message: 'No tienes acceso a esta cuenta.' });
+            }
+            query.$and = [
+                {
+                    $or: [
+                        { cuentaOrigenId: accountId },
+                        { cuentaDestinoId: accountId }
+                    ]
+                }
+            ];
+        }
+
+        const transactions = await Transaction.find(query)
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .populate('cuentaOrigenId', 'numeroCuenta tipo')
+            .populate('cuentaDestinoId', 'numeroCuenta tipo');
+
+        res.status(200).json({ status: 'success', data: transactions });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};

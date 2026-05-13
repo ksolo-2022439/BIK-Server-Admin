@@ -5,7 +5,8 @@ import {
     executeCashDeposit, 
     executeMobileTransfer, 
     executeInternationalTransfer,
-    getPersonalFinances 
+    getPersonalFinances,
+    getUserTransactions 
 } from './transaction.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin, hasRole } from '../../middlewares/validate-roles.js';
@@ -186,5 +187,6 @@ router.post('/deposit', hasRole('Cajero'), executeCashDeposit);
  *         description: Datos agrupados por tipo de transacción.
  */
 router.get('/analytics', getPersonalFinances);
+router.get('/history', getUserTransactions);
 
 export default router;
