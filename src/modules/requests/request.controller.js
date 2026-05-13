@@ -33,14 +33,24 @@ export const getUserRequests = async (req, res) => {
  */
 export const updateRequestStatus = async (req, res) => {
     try {
-        const { estado } = req.body;
+        const { estado, comentario } = req.body;
         const updatedRequest = await Request.findByIdAndUpdate(
             req.params.id,
-            { estado, fechaResolucion: new Date() },
+            { 
+                estado, 
+                fechaResolucion: estado === 'Completada' || estado === 'Rechazada' ? new Date() : undefined,
+                $push: {
+                    notas: {
+                        autor: req.user.uid,
+                        texto: comentario || `Estado actualizado a ${estado}`,
+                        fecha: new Date()
+                    }
+                }
+            },
             { new: true }
         );
         res.status(200).json({ status: 'success', data: updatedRequest });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
-};
+};

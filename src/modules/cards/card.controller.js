@@ -56,8 +56,6 @@ export const toggleCardFreeze = async (req, res) => {
 
         res.status(200).json({ status: 'success', data: card });
     } catch (error) {
-        res.status(200).json({ status: 'success', data: card });
-    } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };

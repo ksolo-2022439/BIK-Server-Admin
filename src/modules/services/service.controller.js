@@ -7,12 +7,9 @@ import Transaction from '../transactions/transaction.model.js';
  * Registra la operación como una transacción de tipo Pago_Servicio.
  */
 export const payService = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { cuentaOrigenId, monto, servicio, descripcion } = req.body;
-        const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
+        const cuentaOrigen = await Account.findById(cuentaOrigenId);
 
         if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
             throw new Error('Cuenta de origen no válida o inactiva.');
@@ -23,7 +20,7 @@ export const payService = async (req, res) => {
         }
 
         cuentaOrigen.saldo -= monto;
-        await cuentaOrigen.save({ session });
+        await cuentaOrigen.save();
 
         const transaction = new Transaction({
             cuentaOrigenId,
@@ -34,14 +31,10 @@ export const payService = async (req, res) => {
             estado: 'Completada'
         });
 
-        await transaction.save({ session });
-        await session.commitTransaction();
+        await transaction.save();
         
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
-        await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
-    } finally {
-        session.endSession();
     }
-};
+};

@@ -4,6 +4,7 @@ import {
     listUsers,
     getFullClientProfile,
     listAllRequests,
+    getRequestById,
     escalateRequest,
     executeWithdrawal,
     getAccountStatement,
@@ -41,6 +42,7 @@ router.get('/users/:id/full-profile', getFullClientProfile);
 // GESTIONES (Requests) — Según rol
 // ═══════════════════════════════════════════
 router.get('/requests', hasRole('Admin_Gestiones', 'Soporte_Remoto', 'Soporte_Presencial'), listAllRequests);
+router.get('/requests/:id', hasRole('Admin_Gestiones', 'Soporte_Remoto', 'Soporte_Presencial'), getRequestById);
 router.patch('/requests/:id/escalate', hasRole('Soporte_Remoto'), escalateRequest);
 
 // ═══════════════════════════════════════════

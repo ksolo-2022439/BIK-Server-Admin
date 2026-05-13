@@ -111,6 +111,9 @@ export const listUsers = async (req, res) => {
 export const getFullClientProfile = async (req, res) => {
     try {
         const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ status: 'error', message: 'ID de usuario no válido.' });
+        }
         const user = await User.findById(id).select('-passwordHash');
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
@@ -176,6 +179,30 @@ export const listAllRequests = async (req, res) => {
 };
 
 /**
+ * Obtiene el detalle de una gestión específica por su ID.
+ */
+export const getRequestById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ status: 'error', message: 'ID de gestión no válido.' });
+        }
+
+        const request = await Request.findById(id)
+            .populate('usuarioId', 'nombres apellidos dpi email telefono');
+
+        if (!request) {
+            return res.status(404).json({ status: 'error', message: 'Gestión no encontrada.' });
+        }
+
+        res.status(200).json({ status: 'success', data: request });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+
+/**
  * Escalar una gestión asignándole prioridad alta.
  * Exclusivo para Soporte Remoto.
  */
@@ -212,12 +239,9 @@ export const escalateRequest = async (req, res) => {
 
 /**
  * Retiro de fondos en ventanilla.
- * Solo disponible para Cajeros. Requiere cuenta destino y monto.
+ * Solo disponible para Cajeros. Requiere cuenta origen y monto.
  */
 export const executeWithdrawal = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { cuentaOrigenId, monto, descripcion } = req.body;
         const referenciaCajero = req.user.uid;
@@ -226,7 +250,7 @@ export const executeWithdrawal = async (req, res) => {
             throw new Error('El monto debe ser mayor a cero.');
         }
 
-        const cuenta = await Account.findById(cuentaOrigenId).session(session);
+        const cuenta = await Account.findById(cuentaOrigenId);
 
         if (!cuenta || cuenta.estado !== 'Activa') {
             throw new Error('Cuenta no válida o inactiva.');
@@ -237,7 +261,7 @@ export const executeWithdrawal = async (req, res) => {
         }
 
         cuenta.saldo -= monto;
-        await cuenta.save({ session });
+        await cuenta.save();
 
         const transaction = new Transaction({
             cuentaOrigenId,
@@ -249,15 +273,11 @@ export const executeWithdrawal = async (req, res) => {
             referenciaCajero
         });
 
-        await transaction.save({ session });
+        await transaction.save();
 
-        await session.commitTransaction();
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
-        await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
-    } finally {
-        session.endSession();
     }
 };
 

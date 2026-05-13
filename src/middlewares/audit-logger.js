@@ -8,7 +8,7 @@ import AuditLog from '../modules/audit/audit.model.js';
 export const auditLogger = async (req, res, next) => {
     next();
 
-    if (req.user && req.user.rol === 'Administrador') {
+    if (req.user && req.user.rol !== 'Cliente') {
         const metodosAuditables = ['POST', 'PUT', 'PATCH', 'DELETE'];
         
         if (metodosAuditables.includes(req.method)) {

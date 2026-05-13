@@ -7,14 +7,11 @@ import Transaction from '../transactions/transaction.model.js';
  * Valida la existencia y el estado activo de ambas cuentas antes de procesar el movimiento.
  */
 export const processQrPayment = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
     try {
         const { cuentaOrigenId, cuentaDestinoId, monto } = req.body;
         
-        const cuentaOrigen = await Account.findById(cuentaOrigenId).session(session);
-        const cuentaDestino = await Account.findById(cuentaDestinoId).session(session);
+        const cuentaOrigen = await Account.findById(cuentaOrigenId);
+        const cuentaDestino = await Account.findById(cuentaDestinoId);
 
         if (!cuentaOrigen || !cuentaDestino) {
             throw new Error('Cuenta de origen o destino no encontrada.');
@@ -31,8 +28,8 @@ export const processQrPayment = async (req, res) => {
         cuentaOrigen.saldo -= monto;
         cuentaDestino.saldo += monto;
 
-        await cuentaOrigen.save({ session });
-        await cuentaDestino.save({ session });
+        await cuentaOrigen.save();
+        await cuentaDestino.save();
 
         const transaction = new Transaction({
             cuentaOrigenId,
@@ -43,14 +40,10 @@ export const processQrPayment = async (req, res) => {
             estado: 'Completada'
         });
 
-        await transaction.save({ session });
-        await session.commitTransaction();
+        await transaction.save();
         
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
-        await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
-    } finally {
-        session.endSession();
     }
-};
+};
