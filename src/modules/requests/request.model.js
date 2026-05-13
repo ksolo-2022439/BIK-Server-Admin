@@ -9,7 +9,7 @@ const requestSchema = new mongoose.Schema({
     descripcion: { type: String, required: true },
     estado: {
         type: String,
-        enum: ['Pendiente', 'En_Proceso', 'Completada', 'Rechazada'],
+        enum: ['Pendiente', 'En_Proceso', 'Aprobada', 'Completada', 'Rechazada'],
         default: 'Pendiente'
     },
     prioridad: {

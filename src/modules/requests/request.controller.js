@@ -63,7 +63,7 @@ export const updateRequestStatus = async (req, res) => {
             } else if (tipoGestion.includes('Tarjeta de Débito')) {
                 const cuenta = await Account.findOne({ usuarioId, estado: 'Activa' });
                 if (cuenta) {
-                    await generateCard(usuarioId, cuenta._id, 'Debito', 0, cuenta.tipo);
+                    await generateCard(usuarioId, cuenta._id, 'Debito Fisica', 0, cuenta.tipo);
                 }
             }
         }
@@ -80,7 +80,7 @@ export const updateRequestStatus = async (req, res) => {
  */
 const generateCard = async (usuarioId, cuentaVinculadaId, tipo, limiteCredito = 0, tipoCuenta = '') => {
     let primerDigito = '4'; // Visa por defecto
-    if (tipo === 'Debito' && (tipoCuenta === 'Ahorro' || tipoCuenta.toLowerCase().includes('ahorro'))) {
+    if (tipo.includes('Debito') && (tipoCuenta === 'Ahorro' || tipoCuenta.toLowerCase().includes('ahorro'))) {
         primerDigito = '5'; // Mastercard para Ahorro
     }
     
