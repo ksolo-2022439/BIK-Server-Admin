@@ -12,12 +12,12 @@ export const executeInternalTransfer = async (req, res) => {
     try {
         const { cuentaOrigenId, cuentaDestinoId, monto, descripcion, monedaTransferencia } = req.body;
 
-        const cuentaOrigen = await Account.findById(cuentaOrigenId);
+        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
         
-        // Soporte para buscar cuenta destino por ID o por número de cuenta (String)
+        // Soporte para buscar cuenta destino por publicId (UUID) o por número de cuenta (String)
         let cuentaDestino;
-        if (mongoose.Types.ObjectId.isValid(cuentaDestinoId)) {
-            cuentaDestino = await Account.findById(cuentaDestinoId);
+        if (cuentaDestinoId && cuentaDestinoId.length > 20) {
+            cuentaDestino = await Account.findOne({ publicId: cuentaDestinoId });
         } else {
             cuentaDestino = await Account.findOne({ numeroCuenta: cuentaDestinoId });
         }
@@ -111,7 +111,7 @@ export const executeACHTransfer = async (req, res) => {
     try {
         const { cuentaOrigenId, monto, descripcion, achDetails, monedaTransferencia } = req.body;
 
-        const cuentaOrigen = await Account.findById(cuentaOrigenId);
+        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
 
         if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
             throw new Error('Cuenta de origen no válida o inactiva.');
@@ -145,7 +145,7 @@ export const executeACHTransfer = async (req, res) => {
         await cuentaOrigen.save();
 
         const transaction = new Transaction({
-            cuentaOrigenId,
+            cuentaOrigenId: cuentaOrigen._id,
             cuentaDestinoId: null,
             monto: montoDebitar,
             tipo: 'Transferencia_ACH',
@@ -174,7 +174,7 @@ export const executeCashDeposit = async (req, res) => {
         const { cuentaDestinoId, monto, descripcion, monedaDeposito } = req.body;
         const referenciaCajero = req.user.uid;
 
-        const cuentaDestino = await Account.findById(cuentaDestinoId);
+        const cuentaDestino = await Account.findOne({ publicId: cuentaDestinoId });
 
         if (!cuentaDestino || cuentaDestino.estado !== 'Activa') {
             throw new Error('Cuenta de destino no válida o inactiva.');
@@ -206,7 +206,7 @@ export const executeCashDeposit = async (req, res) => {
 
         const transaction = new Transaction({
             cuentaOrigenId: null,
-            cuentaDestinoId,
+            cuentaDestinoId: cuentaDestino._id,
             monto: montoAcreditar,
             tipo: 'Deposito_Efectivo',
             descripcion: descripcionFinal,
@@ -335,7 +335,7 @@ export const executeInternationalTransfer = async (req, res) => {
             throw new Error('Faltan datos obligatorios para la transferencia internacional (SWIFT, Banco, Cuenta o Beneficiario).');
         }
 
-        const cuentaOrigen = await Account.findById(cuentaOrigenId);
+        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
 
         if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
             throw new Error('Cuenta de origen no válida o inactiva.');
@@ -376,7 +376,7 @@ export const executeInternationalTransfer = async (req, res) => {
         await cuentaOrigen.save();
 
         const transaction = new Transaction({
-            cuentaOrigenId,
+            cuentaOrigenId: cuentaOrigen._id,
             cuentaDestinoId: null,
             monto: montoDebitar,
             tipo: 'Transferencia_Internacional',
@@ -408,8 +408,24 @@ export const executeInternationalTransfer = async (req, res) => {
  */
 export const getPersonalFinances = async (req, res) => {
     try {
+        const userId = req.user.uid;
+        const user = await User.findByAnyId(userId);
+        
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
+        const userAccounts = await Account.find({ usuarioId: user._id }).distinct('_id');
+
         const stats = await Transaction.aggregate([
-            { $match: { cuentaOrigenId: { $ne: null } } },
+            { 
+                $match: { 
+                    $or: [
+                        { cuentaOrigenId: { $in: userAccounts } },
+                        { cuentaDestinoId: { $in: userAccounts } }
+                    ]
+                } 
+            },
             { $group: {
                 _id: "$tipo",
                 totalGastado: { $sum: "$monto" },
@@ -433,10 +449,13 @@ export const getUserTransactions = async (req, res) => {
         const { tipo, accountId, limit = 50 } = req.query;
         const userId = req.user.uid;
 
-        // 1. Obtener todas las cuentas del usuario
-        const userAccounts = await Account.find({ usuarioId: userId }).distinct('_id');
+        const user = await User.findByAnyId(userId);
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
 
-        // 2. Construir la consulta
+        const userAccounts = await Account.find({ usuarioId: user._id }).distinct('_id');
+
         const query = {
             $or: [
                 { cuentaOrigenId: { $in: userAccounts } },
@@ -445,19 +464,12 @@ export const getUserTransactions = async (req, res) => {
         };
 
         if (tipo) query.tipo = tipo;
+        
         if (accountId) {
-            // Verificar que la cuenta pertenece al usuario
-            if (!userAccounts.some(id => id.toString() === accountId)) {
-                return res.status(403).json({ status: 'error', message: 'No tienes acceso a esta cuenta.' });
+            const acc = await Account.findByAnyId(accountId);
+            if (acc) {
+                query.$and = [{ $or: [{ cuentaOrigenId: acc._id }, { cuentaDestinoId: acc._id }] }];
             }
-            query.$and = [
-                {
-                    $or: [
-                        { cuentaOrigenId: accountId },
-                        { cuentaDestinoId: accountId }
-                    ]
-                }
-            ];
         }
 
         const transactions = await Transaction.find(query)
@@ -465,6 +477,37 @@ export const getUserTransactions = async (req, res) => {
             .limit(parseInt(limit))
             .populate('cuentaOrigenId', 'numeroCuenta tipo')
             .populate('cuentaDestinoId', 'numeroCuenta tipo');
+
+        res.status(200).json({ status: 'success', data: transactions });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+};
+
+/**
+ * Obtiene el historial de una cuenta específica con validación de propiedad.
+ */
+export const getAccountHistory = async (req, res) => {
+    try {
+        const { accountId } = req.query;
+        const limit = parseInt(req.query.limit) || 20;
+
+        const account = await Account.findByAnyId(accountId);
+        if (!account) {
+            return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
+        }
+
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || account.usuarioId.toString() !== user._id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para ver esta cuenta.' });
+        }
+
+        const transactions = await Transaction.find({
+            $or: [{ cuentaOrigenId: account._id }, { cuentaDestinoId: account._id }]
+        })
+        .populate('cuentaOrigenId cuentaDestinoId')
+        .sort({ createdAt: -1 })
+        .limit(limit);
 
         res.status(200).json({ status: 'success', data: transactions });
     } catch (error) {

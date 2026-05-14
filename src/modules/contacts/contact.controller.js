@@ -1,5 +1,6 @@
 import Contact from './contact.model.js';
 import Account from '../accounts/account.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Registra un nuevo destinatario en la libreta de contactos del usuario.
@@ -7,40 +8,53 @@ import Account from '../accounts/account.model.js';
  */
 export const createContact = async (req, res) => {
     try {
-        const { numeroCuenta, tipoDestinatario, banco } = req.body;
+        const { numeroCuenta, tipoDestinatario, banco, alias } = req.body;
+
+        if (!alias || !numeroCuenta || !tipoDestinatario) {
+            return res.status(400).json({ status: 'error', message: 'Faltan campos obligatorios (alias, número de cuenta, tipo).' });
+        }
 
         // Validación para cuentas internas BIK
         if (tipoDestinatario === 'BIK') {
-            const accountExists = await Account.findOne({ numeroCuenta, estado: 'Activa' });
+            const accountExists = await Account.findOne({ numeroCuenta });
             if (!accountExists) {
                 return res.status(404).json({ 
                     status: 'error', 
-                    message: 'La cuenta BIK destino no existe o no se encuentra activa.' 
+                    message: 'La cuenta BIK destino no existe.' 
+                });
+            }
+            if (accountExists.estado !== 'Activa') {
+                return res.status(400).json({ 
+                    status: 'error', 
+                    message: `La cuenta BIK está en estado '${accountExists.estado}' y no puede ser agregada como contacto.` 
                 });
             }
         }
 
-        // Validación simulada para transferencias ACH
+        // Validación para transferencias ACH (Otros Bancos)
         if (tipoDestinatario === 'ACH') {
-            // Simulación: Validamos que el número de cuenta tenga una longitud razonable
-            // y que el banco haya sido seleccionado.
-            if (!numeroCuenta || numeroCuenta.length < 8) {
+            if (numeroCuenta.length < 6) {
                 return res.status(400).json({ 
                     status: 'error', 
-                    message: 'El número de cuenta ACH no cumple con el formato requerido.' 
+                    message: 'El número de cuenta de otro banco debe tener al menos 6 dígitos.' 
                 });
             }
-            if (!banco) {
+            if (!banco || banco === 'BIK') {
                 return res.status(400).json({ 
                     status: 'error', 
-                    message: 'Debe especificar el banco destino para transferencias ACH.' 
+                    message: 'Debe seleccionar un banco destino válido para cuentas ACH.' 
                 });
             }
+        }
+
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) {
+            return res.status(401).json({ status: 'error', message: 'Sesión inválida o usuario no encontrado.' });
         }
 
         const newContact = new Contact({
             ...req.body,
-            usuarioId: req.user.uid
+            usuarioId: user._id
         });
         await newContact.save();
         res.status(201).json({ status: 'success', data: newContact });
@@ -55,7 +69,10 @@ export const createContact = async (req, res) => {
  */
 export const getUserContacts = async (req, res) => {
     try {
-        const contacts = await Contact.find({ usuarioId: req.user.uid }).sort({ alias: 1 });
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) throw new Error('Usuario no encontrado.');
+
+        const contacts = await Contact.find({ usuarioId: user._id }).sort({ alias: 1 });
         res.status(200).json({ status: 'success', data: contacts });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -69,8 +86,11 @@ export const getUserContacts = async (req, res) => {
 export const updateContact = async (req, res) => {
     try {
         const { id } = req.params;
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) throw new Error('Usuario no encontrado.');
+
         const updatedContact = await Contact.findOneAndUpdate(
-            { _id: id, usuarioId: req.user.uid },
+            { _id: id, usuarioId: user._id },
             req.body,
             { new: true }
         );
@@ -91,7 +111,10 @@ export const updateContact = async (req, res) => {
 export const deleteContact = async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedContact = await Contact.findOneAndDelete({ _id: id, usuarioId: req.user.uid });
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) throw new Error('Usuario no encontrado.');
+
+        const deletedContact = await Contact.findOneAndDelete({ _id: id, usuarioId: user._id });
         
         if (!deletedContact) {
             return res.status(404).json({ status: 'error', message: 'Contacto no encontrado.' });

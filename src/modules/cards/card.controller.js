@@ -1,5 +1,6 @@
 import Card from './card.model.js';
 import Account from '../accounts/account.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Genera una nueva tarjeta de débito o crédito para un usuario.
@@ -9,11 +10,18 @@ export const requestCard = async (req, res) => {
     try {
         const { usuarioId, cuentaVinculadaId, tipo, limiteCredito } = req.body;
         
+        const user = await User.findOne({ publicId: usuarioId });
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
+        let internalCuentaId = null;
         if (tipo !== 'Credito') {
-            const cuenta = await Account.findById(cuentaVinculadaId);
+            const cuenta = await Account.findOne({ publicId: cuentaVinculadaId });
             if (!cuenta) {
                 return res.status(404).json({ status: 'error', message: 'Cuenta vinculada no encontrada.' });
             }
+            internalCuentaId = cuenta._id;
         }
 
         const numeroTarjeta = '4' + Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0');
@@ -23,8 +31,8 @@ export const requestCard = async (req, res) => {
 
         const newCard = new Card({
             numeroTarjeta,
-            usuarioId,
-            cuentaVinculadaId,
+            usuarioId: user._id,
+            cuentaVinculadaId: internalCuentaId,
             tipo,
             limiteCredito: tipo === 'Credito' ? limiteCredito : 0,
             cvv,
@@ -90,7 +98,13 @@ export const updateCardConfig = async (req, res) => {
 export const getUserCards = async (req, res) => {
     try {
         const { usuarioId } = req.params;
-        const cards = await Card.find({ usuarioId });
+        const user = await User.findByAnyId(usuarioId);
+        
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
+        const cards = await Card.find({ usuarioId: user._id }).populate('cuentaVinculadaId');
         res.status(200).json({ status: 'success', data: cards });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
