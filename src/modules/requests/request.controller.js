@@ -7,8 +7,15 @@ import Account from '../accounts/account.model.js';
  */
 export const createRequest = async (req, res) => {
     try {
+        let cuentaId = null;
+        if (req.body.cuentaVinculadaId) {
+            const cuenta = await Account.findOne({ publicId: req.body.cuentaVinculadaId });
+            if (cuenta) cuentaId = cuenta._id;
+        }
+
         const newRequest = new Request({
             ...req.body,
+            cuentaVinculadaId: cuentaId,
             usuarioId: req.user.uid
         });
         await newRequest.save();
@@ -56,12 +63,29 @@ export const updateRequestStatus = async (req, res) => {
 
         // Lógica de automatización al aprobar (Solo si cambia a Aprobada)
         if (estado === 'Aprobada' && oldEstado !== 'Aprobada') {
-            const { tipoGestion, usuarioId, montoSolicitado } = request;
+            const { tipoGestion, usuarioId, montoSolicitado, descripcion, cuentaVinculadaId } = request;
 
-            if (tipoGestion.includes('Tarjeta de Crédito')) {
+            // Creación automática de Cuenta Digital
+            if (tipoGestion.includes('Nueva Cuenta') || tipoGestion.includes('Cuenta Digital')) {
+                const isUSD = descripcion.toUpperCase().includes('USD') || descripcion.toUpperCase().includes('DOLARES');
+                const isAhorro = descripcion.toUpperCase().includes('AHORRO');
+                
+                // Generar un número de cuenta aleatorio de 10 dígitos
+                const numCuenta = Math.floor(Math.random() * 9000000000) + 1000000000;
+                
+                await Account.create({ 
+                    usuarioId, 
+                    numeroCuenta: numCuenta.toString(),
+                    tipo: isAhorro ? 'Ahorro' : 'Monetaria', 
+                    moneda: isUSD ? 'USD' : 'GTQ',
+                    estado: 'Activa' 
+                });
+            }
+            else if (tipoGestion.includes('Tarjeta de Crédito')) {
                 await generateCard(usuarioId, null, 'Credito', montoSolicitado || 5000);
             } else if (tipoGestion.includes('Tarjeta de Débito')) {
-                const cuenta = await Account.findOne({ usuarioId, estado: 'Activa' });
+                // Usar la cuenta vinculada si existe, sino buscar la primera activa
+                let cuenta = cuentaVinculadaId ? await Account.findById(cuentaVinculadaId) : await Account.findOne({ usuarioId, estado: 'Activa' });
                 if (cuenta) {
                     await generateCard(usuarioId, cuenta._id, 'Debito Fisica', 0, cuenta.tipo);
                 }

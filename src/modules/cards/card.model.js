@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const cardSchema = new mongoose.Schema({
+    publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
     numeroTarjeta: { type: String, required: true, unique: true },
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     cuentaVinculadaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Opcional para tarjetas de crédito

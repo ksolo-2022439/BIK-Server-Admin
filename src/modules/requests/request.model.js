@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const requestSchema = new mongoose.Schema({
+    publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
     usuarioId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    cuentaVinculadaId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' },
     tipoGestion: {
         type: String,
         required: true

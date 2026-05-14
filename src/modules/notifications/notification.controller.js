@@ -1,11 +1,15 @@
 import Notification from './notification.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Recupera el historial de alertas y avisos asociados al perfil del usuario autenticado.
  */
 export const getUserNotifications = async (req, res) => {
     try {
-        const notifications = await Notification.find({ usuarioId: req.user.uid }).sort({ fecha: -1 });
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) throw new Error('Usuario no encontrado.');
+
+        const notifications = await Notification.find({ usuarioId: user._id }).sort({ fecha: -1 });
         res.status(200).json({ status: 'success', data: notifications });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

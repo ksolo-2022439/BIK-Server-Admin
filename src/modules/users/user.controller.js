@@ -51,7 +51,9 @@ export const getUserByDpi = async (req, res) => {
 // Obtener información de un usuario por su ID de MongoDB (Útil para el flujo post-login)
 export const getUserById = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const { id } = req.params;
+        const user = await User.findByAnyId(id);
+        
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }

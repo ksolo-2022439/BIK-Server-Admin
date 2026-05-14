@@ -1,4 +1,5 @@
 import Document from './document.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Registra la aceptación legal de un documento o contrato por parte del usuario.
@@ -23,7 +24,10 @@ export const signDocument = async (req, res) => {
  */
 export const getMyDocuments = async (req, res) => {
     try {
-        const docs = await Document.find({ usuarioId: req.user.uid });
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) throw new Error('Usuario no encontrado.');
+
+        const docs = await Document.find({ usuarioId: user._id });
         res.status(200).json({ status: 'success', data: docs });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

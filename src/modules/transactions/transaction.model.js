@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const transactionSchema = new mongoose.Schema({
+    publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
     cuentaOrigenId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es depósito en efectivo
     cuentaDestinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es ACH o Internacional
     monto: { type: Number, required: true },

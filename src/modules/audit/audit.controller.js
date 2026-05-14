@@ -8,7 +8,6 @@ import AuditLog from './audit.model.js';
 export const getAuditLogs = async (req, res) => {
     try {
         const logs = await AuditLog.find()
-            .populate('adminId', 'nombres apellidos dpi')
             .sort({ createdAt: -1 })
             .limit(100);
 

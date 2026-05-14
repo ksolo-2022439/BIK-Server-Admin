@@ -111,21 +111,19 @@ export const listUsers = async (req, res) => {
 export const getFullClientProfile = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ status: 'error', message: 'ID de usuario no válido.' });
-        }
-        const user = await User.findById(id).select('-passwordHash');
+        const user = await User.findOne({ publicId: id }).select('-passwordHash');
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
 
+        // Usamos user._id (ObjectId) para las consultas en otras colecciones
         const [accounts, cards, recentTransactions] = await Promise.all([
-            Account.find({ usuarioId: id }),
-            Card.find({ usuarioId: id }),
+            Account.find({ usuarioId: user._id }),
+            Card.find({ usuarioId: user._id }),
             Transaction.find({
                 $or: [
-                    { cuentaOrigenId: { $in: await Account.find({ usuarioId: id }).distinct('_id') } },
-                    { cuentaDestinoId: { $in: await Account.find({ usuarioId: id }).distinct('_id') } }
+                    { cuentaOrigenId: { $in: await Account.find({ usuarioId: user._id }).distinct('_id') } },
+                    { cuentaDestinoId: { $in: await Account.find({ usuarioId: user._id }).distinct('_id') } }
                 ]
             }).sort({ createdAt: -1 }).limit(20)
         ]);
@@ -184,12 +182,10 @@ export const listAllRequests = async (req, res) => {
 export const getRequestById = async (req, res) => {
     try {
         const { id } = req.params;
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ status: 'error', message: 'ID de gestión no válido.' });
-        }
 
-        const request = await Request.findById(id)
-            .populate('usuarioId', 'nombres apellidos dpi email telefono');
+        // Búsqueda por publicId (UUID)
+        const request = await Request.findOne({ publicId: id })
+            .populate('usuarioId', 'nombres apellidos dpi email telefono publicId');
 
         if (!request) {
             return res.status(404).json({ status: 'error', message: 'Gestión no encontrada.' });
@@ -211,8 +207,8 @@ export const escalateRequest = async (req, res) => {
         const { id } = req.params;
         const { prioridad, comentario } = req.body;
 
-        const updatedRequest = await Request.findByIdAndUpdate(
-            id,
+        const updatedRequest = await Request.findOneAndUpdate(
+            { publicId: id },
             {
                 prioridad: prioridad || 'Alta',
                 estado: 'En_Proceso',
@@ -250,7 +246,8 @@ export const executeWithdrawal = async (req, res) => {
             throw new Error('El monto debe ser mayor a cero.');
         }
 
-        const cuenta = await Account.findById(cuentaOrigenId);
+        // Buscamos por publicId (UUID)
+        const cuenta = await Account.findOne({ publicId: cuentaOrigenId });
 
         if (!cuenta || cuenta.estado !== 'Activa') {
             throw new Error('Cuenta no válida o inactiva.');
@@ -264,7 +261,7 @@ export const executeWithdrawal = async (req, res) => {
         await cuenta.save();
 
         const transaction = new Transaction({
-            cuentaOrigenId,
+            cuentaOrigenId: cuenta._id,
             cuentaDestinoId: null,
             monto,
             tipo: 'Retiro',
@@ -290,7 +287,7 @@ export const getAccountStatement = async (req, res) => {
         const { id } = req.params;
         const { desde, hasta } = req.query;
 
-        const account = await Account.findById(id).populate('usuarioId', 'nombres apellidos dpi email telefono direccion');
+        const account = await Account.findOne({ publicId: id }).populate('usuarioId', 'nombres apellidos dpi email telefono direccion publicId');
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
@@ -357,15 +354,17 @@ export const findAccountByNumber = async (req, res) => {
 export const getAccountDetail = async (req, res) => {
     try {
         const { id } = req.params;
-        const account = await Account.findById(id)
-            .populate('usuarioId', 'nombres apellidos dpi email telefono direccion ingresosMensuales estado');
+        const account = await Account.findOne({ publicId: id })
+            .populate('usuarioId', 'nombres apellidos dpi email telefono direccion ingresosMensuales estado publicId');
 
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
 
+        // Importante: Para las tarjetas usamos el id (publicId) si la relación es por publicId, 
+        // pero Card.cuentaVinculadaId es un ObjectId en el modelo.
         const [cards, recentTransactions] = await Promise.all([
-            Card.find({ cuentaVinculadaId: id }),
+            Card.find({ cuentaVinculadaId: account._id }),
             Transaction.find({
                 $or: [
                     { cuentaOrigenId: account._id },
