@@ -30,6 +30,7 @@ export const seedData = async () => {
 
         const users = [
             {
+                publicId: "00000000-0000-0000-0000-000000000001",
                 nombres: "Admin",
                 apellidos: "Sistema",
                 dpi: "1111222233334",
@@ -46,6 +47,7 @@ export const seedData = async () => {
                 rol: "Administrador"
             },
             {
+                publicId: "6a0503d7-35a6-d63c-7a4d-486400000000",
                 nombres: "Juan",
                 apellidos: "Pruebas",
                 dpi: "3333444455556",

@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const userSchema = new mongoose.Schema({
+    publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
     nombres: { type: String, required: true },
     apellidos: { type: String, required: true },
     dpi: { type: String, required: true, unique: true, length: 13 },
@@ -35,5 +37,21 @@ const userSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+userSchema.statics.findByAnyId = function(id) {
+    if (!id) return null;
+    
+    const query = {
+        $or: [
+            { publicId: id }
+        ]
+    };
+    
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        query.$or.push({ _id: id });
+    }
+    
+    return this.findOne(query);
+};
 
 export default mongoose.model('User', userSchema);
