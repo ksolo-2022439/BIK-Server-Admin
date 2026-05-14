@@ -27,8 +27,8 @@ export const exchangeCurrency = async (req, res) => {
     try {
         const { cuentaOrigenId, cuentaDestinoId, montoOrigen, tasaAplicada } = req.body;
         
-        const cuentaOrigen = await Account.findById(cuentaOrigenId);
-        const cuentaDestino = await Account.findById(cuentaDestinoId);
+        const cuentaOrigen = await Account.findByAnyId(cuentaOrigenId);
+        const cuentaDestino = await Account.findByAnyId(cuentaDestinoId);
 
         if (!cuentaOrigen || !cuentaDestino || cuentaOrigen.usuarioId.toString() !== cuentaDestino.usuarioId.toString()) {
             throw new Error('Cuentas inválidas o no pertenecen al mismo titular.');
@@ -60,8 +60,8 @@ export const exchangeCurrency = async (req, res) => {
         await cuentaDestino.save();
 
         const transaction = new Transaction({
-            cuentaOrigenId,
-            cuentaDestinoId,
+            cuentaOrigenId: cuentaOrigen._id,
+            cuentaDestinoId: cuentaDestino._id,
             monto: montoOrigen,
             tipo: 'Transferencia_Local',
             descripcion: descripcion,
@@ -89,19 +89,28 @@ export const redeemRemittance = async (req, res) => {
     try {
         const { cuentaDestinoId, codigoRemesa, montoAcreditado, remitente } = req.body;
 
-        const cuentaDestino = await Account.findById(cuentaDestinoId);
+        const cuentaDestino = await Account.findByAnyId(cuentaDestinoId);
 
-        if (!cuentaDestino || cuentaDestino.estado !== 'Activa') {
-            throw new Error('Cuenta de destino no válida o inactiva.');
+        if (!cuentaDestino) {
+            throw new Error(`La cuenta de destino (${cuentaDestinoId}) no existe.`);
         }
 
-        cuentaDestino.saldo += montoAcreditado;
+        if (cuentaDestino.estado !== 'Activa') {
+            throw new Error(`La cuenta de destino está en estado '${cuentaDestino.estado}'. Debe estar 'Activa' para recibir remesas.`);
+        }
+
+        const monto = Number(montoAcreditado);
+        if (isNaN(monto) || monto <= 0) {
+            throw new Error('El monto de la remesa debe ser un número positivo válido.');
+        }
+
+        cuentaDestino.saldo += monto;
         await cuentaDestino.save();
 
         const transaction = new Transaction({
             cuentaOrigenId: null,
-            cuentaDestinoId,
-            monto: montoAcreditado,
+            cuentaDestinoId: cuentaDestino._id,
+            monto: monto,
             tipo: 'Remesa',
             descripcion: `Remesa recibida de ${remitente}. Código: ${codigoRemesa}`,
             estado: 'Completada'

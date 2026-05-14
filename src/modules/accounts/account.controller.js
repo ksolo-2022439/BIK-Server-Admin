@@ -9,7 +9,7 @@ export const createAccount = async (req, res) => {
     try {
         const { usuarioId, tipo, moneda } = req.body;
 
-        const userExists = await User.findById(usuarioId);
+        const userExists = await User.findOne({ publicId: usuarioId });
         if (!userExists) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
@@ -18,7 +18,7 @@ export const createAccount = async (req, res) => {
 
         const newAccount = new Account({
             numeroCuenta,
-            usuarioId,
+            usuarioId: userExists._id,
             tipo,
             moneda
         });
@@ -36,7 +36,14 @@ export const createAccount = async (req, res) => {
  */
 export const getUserAccounts = async (req, res) => {
     try {
-        const accounts = await Account.find({ usuarioId: req.params.usuarioId });
+        const { usuarioId } = req.params;
+        const user = await User.findByAnyId(usuarioId);
+        
+        if (!user) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
+        const accounts = await Account.find({ usuarioId: user._id });
         res.status(200).json({ status: 'success', data: accounts });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -52,15 +59,18 @@ export const updateAccountStatus = async (req, res) => {
         const { id } = req.params;
         const { estado } = req.body;
 
-        if (estado === 'Cancelada') {
-            const account = await Account.findById(id);
-            if (account && account.saldo > 0) {
-                return res.status(400).json({ status: 'error', message: 'No se puede cancelar una cuenta con fondos activos.' });
-            }
+        const account = await Account.findByAnyId(id);
+        if (!account) {
+            return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
 
-        const updatedAccount = await Account.findByIdAndUpdate(id, { estado }, { new: true });
-        res.status(200).json({ status: 'success', data: updatedAccount });
+        if (estado === 'Cancelada' && account.saldo > 0) {
+            return res.status(400).json({ status: 'error', message: 'No se puede cancelar una cuenta con fondos activos.' });
+        }
+
+        account.estado = estado;
+        await account.save();
+        res.status(200).json({ status: 'success', data: account });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
@@ -72,14 +82,15 @@ export const updateAccountStatus = async (req, res) => {
 export const freezeAccount = async (req, res) => {
     try {
         const { id } = req.params;
-        const account = await Account.findById(id);
+        const account = await Account.findByAnyId(id);
 
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
 
-        // Verificar que la cuenta pertenezca al usuario del token
-        if (account.usuarioId.toString() !== req.user.uid) {
+        // Verificar que la cuenta pertenezca al usuario del token (comparando ObjectId)
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || account.usuarioId.toString() !== user._id.toString()) {
             return res.status(403).json({ status: 'error', message: 'No tienes permiso para modificar esta cuenta.' });
         }
 
@@ -100,8 +111,20 @@ export const updateTransferLimit = async (req, res) => {
         const { id } = req.params;
         const { limiteTransferenciaDiario } = req.body;
 
-        const updatedAccount = await Account.findByIdAndUpdate(id, { limiteTransferenciaDiario }, { new: true });
-        res.status(200).json({ status: 'success', data: updatedAccount });
+        const account = await Account.findByAnyId(id);
+        if (!account) {
+            return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
+        }
+
+        // Verificar que la cuenta pertenezca al usuario del token
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || account.usuarioId.toString() !== user._id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para modificar esta cuenta.' });
+        }
+
+        account.limiteTransferenciaDiario = Number(limiteTransferenciaDiario);
+        await account.save();
+        res.status(200).json({ status: 'success', data: account });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
@@ -113,7 +136,7 @@ export const updateTransferLimit = async (req, res) => {
 export const toggleFavoriteAccount = async (req, res) => {
     try {
         const { id } = req.params;
-        const account = await Account.findById(id);
+        const account = await Account.findByAnyId(id);
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
