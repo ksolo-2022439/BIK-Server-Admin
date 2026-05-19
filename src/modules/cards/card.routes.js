@@ -69,7 +69,59 @@ router.post('/request', requestCard);
  *         description: Tarjeta no encontrada.
  */
 router.patch('/:id/freeze', toggleCardFreeze);
+
+/**
+ * @swagger
+ * /api/cards/{id}:
+ *   patch:
+ *     summary: Actualizar la configuración o límites de una tarjeta (congelar, límites diarios, etc.)
+ *     tags: [Tarjetas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la tarjeta a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               limiteDiario:
+ *                 type: number
+ *                 example: 2000
+ *     responses:
+ *       200:
+ *         description: Configuración de la tarjeta actualizada con éxito.
+ */
 router.patch('/:id', updateCardConfig);
+
+/**
+ * @swagger
+ * /api/cards/user/{usuarioId}:
+ *   get:
+ *     summary: Listar todas las tarjetas asociadas a un usuario específico
+ *     tags: [Tarjetas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: usuarioId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID o DPI del usuario
+ *     responses:
+ *       200:
+ *         description: Lista de tarjetas recuperada con éxito.
+ *       404:
+ *         description: Usuario no encontrado.
+ */
 router.get('/user/:usuarioId', getUserCards);
 
 export default router;

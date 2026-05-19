@@ -9,7 +9,7 @@ export const createRequest = async (req, res) => {
     try {
         let cuentaId = null;
         if (req.body.cuentaVinculadaId) {
-            const cuenta = await Account.findOne({ publicId: req.body.cuentaVinculadaId });
+            const cuenta = await Account.findByAnyId(req.body.cuentaVinculadaId);
             if (cuenta) cuentaId = cuenta._id;
         }
 
@@ -42,8 +42,8 @@ export const getUserRequests = async (req, res) => {
  */
 export const updateRequestStatus = async (req, res) => {
     try {
-        const { estado, comentario } = req.body;
-        const request = await Request.findById(req.params.id);
+        const { estado, comentario, montoSolicitado } = req.body;
+        const request = await Request.findByAnyId(req.params.id);
         
         if (!request) {
             return res.status(404).json({ status: 'error', message: 'Gestión no encontrada.' });
@@ -51,10 +51,14 @@ export const updateRequestStatus = async (req, res) => {
 
         const oldEstado = request.estado;
         request.estado = estado;
+        if (montoSolicitado !== undefined && montoSolicitado !== null) {
+            request.montoSolicitado = Number(montoSolicitado);
+        }
         if (estado === 'Aprobada' || estado === 'Rechazada') {
             request.fechaResolucion = new Date();
         }
         
+        request.notes = request.notes || []; // Support both notes and notas safely
         request.notas.push({
             autor: req.user.uid,
             texto: comentario || `Estado actualizado a ${estado}`,

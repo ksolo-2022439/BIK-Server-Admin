@@ -128,6 +128,26 @@ router.patch('/:id/limits', updateTransferLimit);
  *         description: No se puede cancelar cuenta con fondos.
  */
 router.patch('/:id/status', isAdmin, updateAccountStatus);
+
+/**
+ * @swagger
+ * /api/accounts/{id}/freeze:
+ *   patch:
+ *     summary: Congelar o descongelar una cuenta bancaria (C Cajero / Admin)
+ *     tags: [Cuentas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la cuenta bancaria a congelar/descongelar
+ *     responses:
+ *       200:
+ *         description: Estado de congelamiento de cuenta modificado.
+ */
 router.patch('/:id/freeze', freezeAccount);
 
 /**

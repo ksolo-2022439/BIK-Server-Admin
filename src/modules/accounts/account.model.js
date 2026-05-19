@@ -19,7 +19,7 @@ const accountSchema = new mongoose.Schema({
     timestamps: true
 });
 
-accountSchema.statics.findByAnyId = async function(id) {
+accountSchema.statics.findByAnyId = function(id) {
     if (!id) return null;
     const query = { $or: [{ publicId: id }] };
     if (mongoose.Types.ObjectId.isValid(id)) {

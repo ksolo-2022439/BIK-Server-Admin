@@ -30,4 +30,13 @@ const requestSchema = new mongoose.Schema({
     montoSolicitado: { type: Number }
 });
 
+requestSchema.statics.findByAnyId = function(id) {
+    if (!id) return null;
+    const query = { $or: [{ publicId: id }] };
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        query.$or.push({ _id: id });
+    }
+    return this.findOne(query);
+};
+
 export default mongoose.model('Request', requestSchema);

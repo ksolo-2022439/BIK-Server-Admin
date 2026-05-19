@@ -12,12 +12,12 @@ export const executeInternalTransfer = async (req, res) => {
     try {
         const { cuentaOrigenId, cuentaDestinoId, monto, descripcion, monedaTransferencia } = req.body;
 
-        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
+        const cuentaOrigen = await Account.findByAnyId(cuentaOrigenId);
         
-        // Soporte para buscar cuenta destino por publicId (UUID) o por número de cuenta (String)
+        // Soporte para buscar cuenta destino por publicId/ObjectId (UUID/String) o por número de cuenta (String)
         let cuentaDestino;
         if (cuentaDestinoId && cuentaDestinoId.length > 20) {
-            cuentaDestino = await Account.findOne({ publicId: cuentaDestinoId });
+            cuentaDestino = await Account.findByAnyId(cuentaDestinoId);
         } else {
             cuentaDestino = await Account.findOne({ numeroCuenta: cuentaDestinoId });
         }
@@ -111,7 +111,7 @@ export const executeACHTransfer = async (req, res) => {
     try {
         const { cuentaOrigenId, monto, descripcion, achDetails, monedaTransferencia } = req.body;
 
-        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
+        const cuentaOrigen = await Account.findByAnyId(cuentaOrigenId);
 
         if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
             throw new Error('Cuenta de origen no válida o inactiva.');
@@ -174,7 +174,7 @@ export const executeCashDeposit = async (req, res) => {
         const { cuentaDestinoId, monto, descripcion, monedaDeposito } = req.body;
         const referenciaCajero = req.user.uid;
 
-        const cuentaDestino = await Account.findOne({ publicId: cuentaDestinoId });
+        const cuentaDestino = await Account.findByAnyId(cuentaDestinoId);
 
         if (!cuentaDestino || cuentaDestino.estado !== 'Activa') {
             throw new Error('Cuenta de destino no válida o inactiva.');
@@ -335,7 +335,7 @@ export const executeInternationalTransfer = async (req, res) => {
             throw new Error('Faltan datos obligatorios para la transferencia internacional (SWIFT, Banco, Cuenta o Beneficiario).');
         }
 
-        const cuentaOrigen = await Account.findOne({ publicId: cuentaOrigenId });
+        const cuentaOrigen = await Account.findByAnyId(cuentaOrigenId);
 
         if (!cuentaOrigen || cuentaOrigen.estado !== 'Activa') {
             throw new Error('Cuenta de origen no válida o inactiva.');

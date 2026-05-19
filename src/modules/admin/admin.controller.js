@@ -111,7 +111,7 @@ export const listUsers = async (req, res) => {
 export const getFullClientProfile = async (req, res) => {
     try {
         const { id } = req.params;
-        const user = await User.findOne({ publicId: id }).select('-passwordHash');
+        const user = await User.findByAnyId(id).select('-passwordHash');
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
@@ -183,8 +183,8 @@ export const getRequestById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Búsqueda por publicId (UUID)
-        const request = await Request.findOne({ publicId: id })
+        // Búsqueda por publicId/ObjectId (UUID/String)
+        const request = await Request.findByAnyId(id)
             .populate('usuarioId', 'nombres apellidos dpi email telefono publicId');
 
         if (!request) {
@@ -207,25 +207,22 @@ export const escalateRequest = async (req, res) => {
         const { id } = req.params;
         const { prioridad, comentario } = req.body;
 
-        const updatedRequest = await Request.findOneAndUpdate(
-            { publicId: id },
-            {
-                prioridad: prioridad || 'Alta',
-                estado: 'En_Proceso',
-                $push: {
-                    notas: {
-                        autor: req.user.uid,
-                        texto: comentario || 'Gestión escalada por Soporte',
-                        fecha: new Date()
-                    }
-                }
-            },
-            { new: true }
-        ).populate('usuarioId', 'nombres apellidos dpi');
-
-        if (!updatedRequest) {
+        const request = await Request.findByAnyId(id);
+        if (!request) {
             return res.status(404).json({ status: 'error', message: 'Gestión no encontrada.' });
         }
+
+        request.prioridad = prioridad || 'Alta';
+        request.estado = 'En_Proceso';
+        request.notas.push({
+            autor: req.user.uid,
+            texto: comentario || 'Gestión escalada por Soporte',
+            fecha: new Date()
+        });
+
+        await request.save();
+
+        const updatedRequest = await Request.findById(request._id).populate('usuarioId', 'nombres apellidos dpi');
 
         res.status(200).json({ status: 'success', data: updatedRequest });
     } catch (error) {
@@ -246,8 +243,8 @@ export const executeWithdrawal = async (req, res) => {
             throw new Error('El monto debe ser mayor a cero.');
         }
 
-        // Buscamos por publicId (UUID)
-        const cuenta = await Account.findOne({ publicId: cuentaOrigenId });
+        // Buscamos por publicId/ObjectId (UUID/String)
+        const cuenta = await Account.findByAnyId(cuentaOrigenId);
 
         if (!cuenta || cuenta.estado !== 'Activa') {
             throw new Error('Cuenta no válida o inactiva.');
@@ -287,7 +284,7 @@ export const getAccountStatement = async (req, res) => {
         const { id } = req.params;
         const { desde, hasta } = req.query;
 
-        const account = await Account.findOne({ publicId: id }).populate('usuarioId', 'nombres apellidos dpi email telefono direccion publicId');
+        const account = await Account.findByAnyId(id).populate('usuarioId', 'nombres apellidos dpi email telefono direccion publicId');
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
         }
@@ -354,7 +351,7 @@ export const findAccountByNumber = async (req, res) => {
 export const getAccountDetail = async (req, res) => {
     try {
         const { id } = req.params;
-        const account = await Account.findOne({ publicId: id })
+        const account = await Account.findByAnyId(id)
             .populate('usuarioId', 'nombres apellidos dpi email telefono direccion ingresosMensuales estado publicId');
 
         if (!account) {

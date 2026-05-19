@@ -10,14 +10,14 @@ export const requestCard = async (req, res) => {
     try {
         const { usuarioId, cuentaVinculadaId, tipo, limiteCredito } = req.body;
         
-        const user = await User.findOne({ publicId: usuarioId });
+        const user = await User.findByAnyId(usuarioId);
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
 
         let internalCuentaId = null;
         if (tipo !== 'Credito') {
-            const cuenta = await Account.findOne({ publicId: cuentaVinculadaId });
+            const cuenta = await Account.findByAnyId(cuentaVinculadaId);
             if (!cuenta) {
                 return res.status(404).json({ status: 'error', message: 'Cuenta vinculada no encontrada.' });
             }
@@ -53,7 +53,7 @@ export const requestCard = async (req, res) => {
 export const toggleCardFreeze = async (req, res) => {
     try {
         const { id } = req.params;
-        const card = await Card.findById(id);
+        const card = await Card.findByAnyId(id);
         
         if (!card) {
             return res.status(404).json({ status: 'error', message: 'Tarjeta no encontrada.' });
@@ -76,17 +76,16 @@ export const updateCardConfig = async (req, res) => {
         const { id } = req.params;
         const { configuraciones } = req.body;
 
-        const updatedCard = await Card.findByIdAndUpdate(
-            id, 
-            { configuraciones }, 
-            { new: true }
-        );
+        const card = await Card.findByAnyId(id);
 
-        if (!updatedCard) {
+        if (!card) {
             return res.status(404).json({ status: 'error', message: 'Tarjeta no encontrada.' });
         }
 
-        res.status(200).json({ status: 'success', data: updatedCard });
+        card.configuraciones = configuraciones;
+        await card.save();
+
+        res.status(200).json({ status: 'success', data: card });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
@@ -101,7 +100,7 @@ export const getUserCards = async (req, res) => {
         const user = await User.findByAnyId(usuarioId);
         
         if (!user) {
-            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+            return res.status(200).json({ status: 'success', data: [] });
         }
 
         const cards = await Card.find({ usuarioId: user._id }).populate('cuentaVinculadaId');

@@ -9,7 +9,7 @@ export const createAccount = async (req, res) => {
     try {
         const { usuarioId, tipo, moneda } = req.body;
 
-        const userExists = await User.findOne({ publicId: usuarioId });
+        const userExists = await User.findByAnyId(usuarioId);
         if (!userExists) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }

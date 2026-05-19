@@ -1,6 +1,12 @@
 import User from './user.model.js';
 import axios from 'axios';
 
+/**
+ * Registra un nuevo cliente bancario en el sistema e inicia su aprovisionamiento de credenciales de acceso.
+ * 
+ * @param {Object} req - Solicitud HTTP con los datos demográficos y de seguridad del nuevo cliente.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const createUser = async (req, res) => {
     try {
         const { dpi, email, telefono, password, ...userData } = req.body;
@@ -35,7 +41,12 @@ export const createUser = async (req, res) => {
     }
 };
 
-// Obtener información de un usuario por su DPI (Útil para transferencias y creación de cuentas)
+/**
+ * Recupera el perfil básico de un usuario utilizando su número de DPI.
+ * 
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const getUserByDpi = async (req, res) => {
     try {
         const user = await User.findOne({ dpi: req.params.dpi });
@@ -48,7 +59,12 @@ export const getUserByDpi = async (req, res) => {
     }
 };
 
-// Obtener información de un usuario por su ID de MongoDB (Útil para el flujo post-login)
+/**
+ * Obtiene el perfil de un usuario utilizando su ID de MongoDB u ofuscado.
+ * 
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -63,11 +79,15 @@ export const getUserById = async (req, res) => {
     }
 };
 
-// Actualizar información demográfica
+/**
+ * Actualiza la información demográfica permitida de un cliente.
+ * 
+ * @param {Object} req - Solicitud HTTP con la información a actualizar.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        // Evitamos que se modifiquen campos críticos por esta ruta
         const { estado, rol, dpi, ...updateData } = req.body; 
 
         const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
@@ -82,7 +102,12 @@ export const updateUser = async (req, res) => {
     }
 };
 
-// Cambiar estado del usuario (Operación de Administrador)
+/**
+ * Modifica el estado administrativo de un usuario (Activo, Suspendido, etc.).
+ * 
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const updateUserStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -96,7 +121,12 @@ export const updateUserStatus = async (req, res) => {
     }
 };
 
-// Cambiar contraseña (Llamada al Auth-Service)
+/**
+ * Cambia la contraseña activa del usuario mediante el puente de microservicios de seguridad.
+ * 
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
+ */
 export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;

@@ -1,10 +1,12 @@
-import mongoose from 'mongoose';
 import Currency from './currency.model.js';
 import Account from '../accounts/account.model.js';
 import Transaction from '../transactions/transaction.model.js';
 
 /**
  * Obtiene las tasas de cambio actuales activas en el banco.
+ * 
+ * @param {Object} req - Solicitud HTTP.
+ * @param {Object} res - Respuesta HTTP.
  */
 export const getExchangeRates = async (req, res) => {
     try {
@@ -17,13 +19,12 @@ export const getExchangeRates = async (req, res) => {
 
 /**
  * Ejecuta un cambio de divisas entre dos cuentas (GTQ y USD) del mismo usuario.
- * Verifica saldos, aplica la tasa de venta actual y registra la transacción atómica.
+ * Aplica la tasa de venta actual y registra la transacción atómica.
+ * 
+ * @param {Object} req - Solicitud HTTP con detalles de las cuentas y monto.
+ * @param {Object} res - Respuesta HTTP.
  */
 export const exchangeCurrency = async (req, res) => {
-    // TODO (PRODUCCION): Reintegrar mongoose.startSession() y session.startTransaction() cuando se despliegue en un Replica Set de MongoDB Atlas.
-    // const session = await mongoose.startSession();
-    // session.startTransaction();
-
     try {
         const { cuentaOrigenId, cuentaDestinoId, montoOrigen, tasaAplicada } = req.body;
         
@@ -38,20 +39,17 @@ export const exchangeCurrency = async (req, res) => {
             throw new Error('Fondos insuficientes para la negociación de divisas.');
         }
 
-        // Determinar dirección de la transacción según la moneda de la cuenta origen
         let montoDestino;
         let descripcion;
         if (cuentaOrigen.moneda === 'GTQ' && cuentaDestino.moneda === 'USD') {
-             // GTQ -> USD (Usando tasaVenta)
              montoDestino = montoOrigen / tasaAplicada;
              descripcion = `Negociación de divisas. Compra de USD. Tasa: ${tasaAplicada}`;
-        } else if (cuentaOrigen.moneda === 'USD' && cuentaDestino.moneda === 'GTQ') {
-             // USD -> GTQ (Usando tasaCompra)
+         } else if (cuentaOrigen.moneda === 'USD' && cuentaDestino.moneda === 'GTQ') {
              montoDestino = montoOrigen * tasaAplicada;
              descripcion = `Negociación de divisas. Venta de USD. Tasa: ${tasaAplicada}`;
-        } else {
+         } else {
              throw new Error('Solo se permite negociación entre cuentas de diferente moneda (GTQ a USD o viceversa).');
-        }
+         }
 
         cuentaOrigen.saldo -= montoOrigen;
         cuentaDestino.saldo += montoDestino;
@@ -69,23 +67,20 @@ export const exchangeCurrency = async (req, res) => {
         });
 
         await transaction.save();
-        // await session.commitTransaction();
 
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
-        // await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
     }
 };
 
 /**
  * Redime un código de remesa internacional y acredita los fondos a la cuenta destino.
+ * 
+ * @param {Object} req - Solicitud HTTP con la información del remitente, código y cuenta.
+ * @param {Object} res - Respuesta HTTP.
  */
 export const redeemRemittance = async (req, res) => {
-    // TODO (PRODUCCION): Reintegrar mongoose.startSession() y session.startTransaction()
-    // const session = await mongoose.startSession();
-    // session.startTransaction();
-
     try {
         const { cuentaDestinoId, codigoRemesa, montoAcreditado, remitente } = req.body;
 
@@ -117,11 +112,9 @@ export const redeemRemittance = async (req, res) => {
         });
 
         await transaction.save();
-        // await session.commitTransaction();
 
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
-        // await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
     }
 };

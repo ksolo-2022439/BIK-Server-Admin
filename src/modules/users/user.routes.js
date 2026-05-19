@@ -174,6 +174,32 @@ router.put('/:id/update', updateUser);
  *         description: Estado actualizado.
  */
 router.patch('/:id/status', isAdmin, updateUserStatus);
+
+/**
+ * @swagger
+ * /api/users/change-password:
+ *   put:
+ *     summary: Cambiar la contraseña del usuario autenticado
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada con éxito.
+ *       400:
+ *         description: Contraseña actual incorrecta o formato inválido.
+ */
 router.put('/change-password', changePassword);
 
 export default router;

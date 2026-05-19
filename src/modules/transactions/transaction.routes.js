@@ -187,6 +187,19 @@ router.post('/deposit', hasRole('Cajero'), executeCashDeposit);
  *         description: Datos agrupados por tipo de transacción.
  */
 router.get('/analytics', getPersonalFinances);
+
+/**
+ * @swagger
+ * /api/transactions/history:
+ *   get:
+ *     summary: Obtener historial de transacciones del usuario autenticado
+ *     tags: [Transacciones]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Historial de transacciones recuperado con éxito.
+ */
 router.get('/history', getUserTransactions);
 
 export default router;

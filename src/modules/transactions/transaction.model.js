@@ -1,11 +1,29 @@
 import mongoose from 'mongoose';
 import crypto from 'crypto';
 
+/**
+ * Esquema de base de datos para registrar todo el historial transaccional de BIK.
+ * Soporta transacciones locales, ACH nacional, transferencias internacionales (SWIFT/ABA),
+ * depósitos en ventanilla, retiros, pagos de servicios, cobros QR y reversiones.
+ */
 const transactionSchema = new mongoose.Schema({
-    publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
-    cuentaOrigenId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es depósito en efectivo
-    cuentaDestinoId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Nulo si es ACH o Internacional
-    monto: { type: Number, required: true },
+    publicId: { 
+        type: String, 
+        unique: true, 
+        default: () => crypto.randomUUID() 
+    },
+    cuentaOrigenId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Account' 
+    },
+    cuentaDestinoId: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Account' 
+    },
+    monto: { 
+        type: Number, 
+        required: true 
+    },
     tipo: { 
         type: String, 
         enum: [
@@ -22,27 +40,29 @@ const transactionSchema = new mongoose.Schema({
         ], 
         required: true 
     },
-    descripcion: { type: String, maxlength: 200 }, // Opcional
+    descripcion: { 
+        type: String, 
+        maxlength: 200 
+    },
     
-    // ACH NACIONAL
     achDetails: {
-        bancoDestino: { type: String }, // Nombre o código del banco
+        bancoDestino: { type: String },
         titularDestino: { type: String },
         cuentaDestinoExterna: { type: String },
         tipoCuentaDestino: { type: String, enum: ['Monetaria', 'Ahorro', ''] }
     },
 
     internationalDetails: {
-        swiftBic: { type: String }, // Código SWIFT/BIC
-        abaRouting: { type: String }, // Routing Number para USA
-        bancoDestino: { type: String }, // Nombre del banco extranjero
-        direccionBanco: { type: String }, // Ciudad, Estado, País
-        cuentaIban: { type: String }, // Número de cuenta o IBAN
+        swiftBic: { type: String },
+        abaRouting: { type: String },
+        bancoDestino: { type: String },
+        direccionBanco: { type: String },
+        cuentaIban: { type: String },
         tipoBeneficiario: { type: String, enum: ['Individual', 'Empresa', ''] },
-        nombreBeneficiario: { type: String }, // Nombre completo
-        direccionBeneficiario: { type: String }, // Calle, Ciudad, País
+        nombreBeneficiario: { type: String },
+        direccionBeneficiario: { type: String },
         motivoTransferencia: { type: String },
-        comisionAplicada: { type: Number, default: 0 } // Costo del envío SWIFT
+        comisionAplicada: { type: Number, default: 0 }
     },
 
     estado: { 
@@ -50,7 +70,10 @@ const transactionSchema = new mongoose.Schema({
         enum: ['Completada', 'Reversada', 'Fallida', 'En_Proceso'], 
         default: 'Completada' 
     },
-    referenciaCajero: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } // Si la operó un admin en agencia
+    referenciaCajero: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User' 
+    }
 }, {
     timestamps: true
 });

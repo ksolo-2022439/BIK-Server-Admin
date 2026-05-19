@@ -21,4 +21,13 @@ const cardSchema = new mongoose.Schema({
     timestamps: true
 });
 
+cardSchema.statics.findByAnyId = function(id) {
+    if (!id) return null;
+    const query = { $or: [{ publicId: id }] };
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        query.$or.push({ _id: id });
+    }
+    return this.findOne(query);
+};
+
 export default mongoose.model('Card', cardSchema);
