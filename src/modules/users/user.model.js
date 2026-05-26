@@ -5,7 +5,7 @@ const userSchema = new mongoose.Schema({
     publicId: { type: String, unique: true, default: () => crypto.randomUUID() },
     nombres: { type: String, required: true },
     apellidos: { type: String, required: true },
-    dpi: { type: String, required: true, unique: true, length: 13 },
+    dpi: { type: String, required: true, unique: true, minlength: 13, maxlength: 13 },
     fechaNacimiento: { type: Date, required: true },
     
     direccion: {

@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import Account from './account.model.js';
 import User from '../users/user.model.js';
 
@@ -14,7 +15,8 @@ export const createAccount = async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
 
-        const numeroCuenta = Date.now().toString().slice(-10);
+        // FIN-032: Generación de número de cuenta único y seguro
+        const numeroCuenta = Date.now().toString().slice(-7) + crypto.randomInt(100, 999).toString();
 
         const newAccount = new Account({
             numeroCuenta,
@@ -139,6 +141,12 @@ export const toggleFavoriteAccount = async (req, res) => {
         const account = await Account.findByAnyId(id);
         if (!account) {
             return res.status(404).json({ status: 'error', message: 'Cuenta no encontrada.' });
+        }
+
+        // SEC-017: Verificar propiedad
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || account.usuarioId.toString() !== user._id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para modificar esta cuenta.' });
         }
 
         account.isFavorite = !account.isFavorite;

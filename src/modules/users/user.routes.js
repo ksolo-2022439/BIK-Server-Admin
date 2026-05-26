@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createUser, getUserByDpi, getUserById, updateUser, updateUserStatus, changePassword } from './user.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin } from '../../middlewares/validate-roles.js';
+import { strictLimiter } from '../../middlewares/rate-limiter.js';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ const router = Router();
  *       400:
  *         description: El DPI, Teléfono o Correo ya están registrados.
  */
-router.post('/register', createUser);
+router.post('/register', strictLimiter, createUser);
 
 router.use(validateJWT);
 
@@ -91,6 +92,34 @@ router.use(validateJWT);
  *         description: Usuario no encontrado.
  */
 router.get('/id/:id', getUserById);
+
+/**
+ * @swagger
+ * /api/users/change-password:
+ *   put:
+ *     summary: Cambiar la contraseña del usuario autenticado
+ *     tags: [Usuarios]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               currentPassword:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contraseña actualizada con éxito.
+ *       400:
+ *         description: Contraseña actual incorrecta o formato inválido.
+ */
+// BE-043: change-password ANTES de /:dpi para evitar conflicto de rutas
+router.put('/change-password', changePassword);
 
 /**
  * @swagger
@@ -174,32 +203,5 @@ router.put('/:id/update', updateUser);
  *         description: Estado actualizado.
  */
 router.patch('/:id/status', isAdmin, updateUserStatus);
-
-/**
- * @swagger
- * /api/users/change-password:
- *   put:
- *     summary: Cambiar la contraseña del usuario autenticado
- *     tags: [Usuarios]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               currentPassword:
- *                 type: string
- *               newPassword:
- *                 type: string
- *     responses:
- *       200:
- *         description: Contraseña actualizada con éxito.
- *       400:
- *         description: Contraseña actual incorrecta o formato inválido.
- */
-router.put('/change-password', changePassword);
 
 export default router;

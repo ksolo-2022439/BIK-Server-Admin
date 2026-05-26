@@ -16,6 +16,7 @@ export const validateJWT = (req, res, next) => {
         
         next();
     } catch (error) {
+        console.error('JWT Verification Error:', error.message, 'Token received:', token ? token.substring(0, 15) + '...' : 'none');
         return res.status(401).json({
             status: 'error',
             message: 'Token no válido o ha expirado.'

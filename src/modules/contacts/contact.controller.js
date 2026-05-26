@@ -53,8 +53,21 @@ export const createContact = async (req, res) => {
         }
 
         const newContact = new Contact({
-            ...req.body,
-            usuarioId: user._id
+            usuarioId: user._id,
+            alias,
+            tipoDestinatario,
+            banco: req.body.banco || 'BIK',
+            numeroCuenta,
+            tipoCuenta: req.body.tipoCuenta || 'Monetaria',
+            ...(tipoDestinatario === 'Internacional' && req.body.datosInternacionales && {
+                datosInternacionales: {
+                    swiftBic: req.body.datosInternacionales.swiftBic,
+                    abaRouting: req.body.datosInternacionales.abaRouting,
+                    direccionBanco: req.body.datosInternacionales.direccionBanco,
+                    direccionBeneficiario: req.body.datosInternacionales.direccionBeneficiario,
+                    tipoBeneficiario: req.body.datosInternacionales.tipoBeneficiario
+                }
+            })
         });
         await newContact.save();
         res.status(201).json({ status: 'success', data: newContact });

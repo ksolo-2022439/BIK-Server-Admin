@@ -1,4 +1,6 @@
 import cron from 'node-cron';
+import mongoose from 'mongoose';
+import Decimal from 'decimal.js';
 import Currency from '../modules/currency/currency.model.js';
 import Insurance from '../modules/insurance/insurance.model.js';
 import Account from '../modules/accounts/account.model.js';
@@ -19,24 +21,38 @@ export const initCronJobs = () => {
         }
     });
 
-    // Cobro de Seguros (El primer día de cada mes a medianoche)
+    // FIN-031: Cobro de Seguros con transacciones MongoDB (El primer día de cada mes a medianoche)
     cron.schedule('0 0 1 * *', async () => {
         try {
             const insurances = await Insurance.find({ estado: 'Activo' });
             for (const ins of insurances) {
-                const account = await Account.findById(ins.cuentaId);
-                if (account && account.saldo >= ins.primaMensual) {
-                    account.saldo -= ins.primaMensual;
-                    await account.save();
+                const session = await mongoose.startSession();
+                try {
+                    session.startTransaction();
                     
-                    const log = new Transaction({
-                        cuentaOrigenId: account._id,
-                        monto: ins.primaMensual,
-                        tipo: 'Pago_Servicio',
-                        descripcion: `Cobro automático mensual: Seguro de ${ins.tipo}`,
-                        estado: 'Completada'
-                    });
-                    await log.save();
+                    const account = await Account.findById(ins.cuentaId).session(session);
+                    if (account && account.saldo >= ins.primaMensual) {
+                        account.saldo = Number(new Decimal(account.saldo).sub(ins.primaMensual).toFixed(2));
+                        await account.save({ session });
+                        
+                        const log = new Transaction({
+                            cuentaOrigenId: account._id,
+                            monto: ins.primaMensual,
+                            tipo: 'Pago_Servicio',
+                            descripcion: `Cobro automático mensual: Seguro de ${ins.tipo}`,
+                            estado: 'Completada'
+                        });
+                        await log.save({ session });
+                        await session.commitTransaction();
+                    } else {
+                        await session.abortTransaction();
+                        console.warn(`Seguro ${ins._id}: Fondos insuficientes para el cobro automático.`);
+                    }
+                } catch (innerError) {
+                    await session.abortTransaction();
+                    console.error(`Error procesando seguro ${ins._id}:`, innerError.message);
+                } finally {
+                    session.endSession();
                 }
             }
         } catch (error) {

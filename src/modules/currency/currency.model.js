@@ -6,6 +6,8 @@ const currencySchema = new mongoose.Schema({
     tasaCompra: { type: Number, required: true },
     tasaVenta: { type: Number, required: true },
     fechaActualizacion: { type: Date, default: Date.now }
+}, {
+    timestamps: true
 });
 
 export default mongoose.model('Currency', currencySchema);

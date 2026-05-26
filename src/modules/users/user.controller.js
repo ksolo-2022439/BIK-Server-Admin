@@ -88,9 +88,17 @@ export const getUserById = async (req, res) => {
 export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { estado, rol, dpi, ...updateData } = req.body; 
+        // SEC-015: Whitelist explícita de campos permitidos
+        const allowedFields = ['nombres', 'apellidos', 'direccion', 'telefono', 'email', 'ingresosMensuales',
+            'fotoDpiAdelanteUrl', 'fotoDpiAtrasUrl', 'fotoRostroUrl', 'fechaNacimiento'];
+        const updateData = {};
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
 
-        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true });
+        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         
         if (!updatedUser) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
@@ -113,8 +121,19 @@ export const updateUserStatus = async (req, res) => {
         const { id } = req.params;
         const { estado } = req.body;
 
+        // BE-044: Validar que estado sea un valor válido del enum
+        const validStates = ['Activo', 'Suspendido', 'En Verificacion'];
+        if (!estado || !validStates.includes(estado)) {
+            return res.status(400).json({ status: 'error', message: `Estado inválido. Valores permitidos: ${validStates.join(', ')}` });
+        }
+
         const updatedUser = await User.findByIdAndUpdate(id, { estado }, { new: true });
         
+        // BE-044: Verificar si el usuario existe
+        if (!updatedUser) {
+            return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
         res.status(200).json({ status: 'success', data: updatedUser });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

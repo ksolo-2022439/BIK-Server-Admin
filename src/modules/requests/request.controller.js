@@ -1,22 +1,35 @@
 import Request from './request.model.js';
 import Card from '../cards/card.model.js';
 import Account from '../accounts/account.model.js';
+import User from '../users/user.model.js';
 
 /**
  * Crea una nueva gestión en línea vinculada al usuario autenticado.
+ * BE-046: Resuelve uid a ObjectId correctamente.
  */
 export const createRequest = async (req, res) => {
     try {
+        // BE-046: Resolver uid a ObjectId
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) {
+            return res.status(401).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
         let cuentaId = null;
         if (req.body.cuentaVinculadaId) {
             const cuenta = await Account.findByAnyId(req.body.cuentaVinculadaId);
             if (cuenta) cuentaId = cuenta._id;
         }
 
+        const { tipoGestion, descripcion, montoSolicitado, prioridad } = req.body;
+
         const newRequest = new Request({
-            ...req.body,
+            usuarioId: user._id,
+            tipoGestion,
+            descripcion,
             cuentaVinculadaId: cuentaId,
-            usuarioId: req.user.uid
+            montoSolicitado,
+            prioridad
         });
         await newRequest.save();
         res.status(201).json({ status: 'success', data: newRequest });
@@ -30,7 +43,14 @@ export const createRequest = async (req, res) => {
  */
 export const getUserRequests = async (req, res) => {
     try {
-        const requests = await Request.find({ usuarioId: req.user.uid }).sort({ fechaSolicitud: -1 });
+        // BE-047: Resolver uid a ObjectId correctamente
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user) {
+            return res.status(401).json({ status: 'error', message: 'Usuario no encontrado.' });
+        }
+
+        const requests = await Request.find({ usuarioId: user._id })
+            .sort({ fechaSolicitud: -1 });
         res.status(200).json({ status: 'success', data: requests });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

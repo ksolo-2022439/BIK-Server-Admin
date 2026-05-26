@@ -1,15 +1,9 @@
 import { Router } from 'express';
 import { processQrPayment } from './qr.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
+import { validateIdempotency } from '../../middlewares/idempotency.js';
 
 const router = Router();
-
-/**
- * @swagger
- * tags:
- *   - name: Pago QR
- *     description: Procesamiento de pagos instantáneos mediante códigos QR
- */
 
 router.use(validateJWT);
 
@@ -38,6 +32,6 @@ router.use(validateJWT);
  *       200:
  *         description: Pago QR procesado exitosamente.
  */
-router.post('/pay', processQrPayment);
+router.post('/pay', validateIdempotency, processQrPayment);
 
 export default router;

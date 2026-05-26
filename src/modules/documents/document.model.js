@@ -6,6 +6,8 @@ const documentSchema = new mongoose.Schema({
     estado: { type: String, enum: ['Pendiente', 'Firmado'], default: 'Pendiente' },
     urlDocumento: { type: String },
     fechaFirma: { type: Date }
+}, {
+    timestamps: true
 });
 
 export default mongoose.model('Document', documentSchema);

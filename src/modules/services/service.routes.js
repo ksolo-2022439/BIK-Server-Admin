@@ -1,15 +1,9 @@
 import { Router } from 'express';
 import { payService } from './service.controller.js';
 import { validateJWT } from '../../middlewares/validate-jwt.js';
+import { validateIdempotency } from '../../middlewares/idempotency.js';
 
 const router = Router();
-
-/**
- * @swagger
- * tags:
- *   - name: Servicios
- *     description: Gestión de pagos de servicios externos
- */
 
 router.use(validateJWT);
 
@@ -40,6 +34,6 @@ router.use(validateJWT);
  *       200:
  *         description: Pago de servicio completado.
  */
-router.post('/pay', payService);
+router.post('/pay', validateIdempotency, payService);
 
 export default router;

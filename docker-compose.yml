@@ -4,11 +4,19 @@ services:
   mongodb:
     image: mongo:latest
     container_name: bik-mongodb
+    command: mongod --replSet rs0 --bind_ip_all
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
+
+  mongodb-setup:
+    image: mongo:latest
+    container_name: bik-mongodb-setup
+    depends_on:
+      - mongodb
+    entrypoint: [ "bash", "-c", "sleep 3 && mongosh --host mongodb --eval 'rs.initiate({_id: \"rs0\", members: [{_id: 0, host: \"mongodb:27017\"}]})' || true" ]
 
   auth-service:
     build: 
@@ -18,7 +26,7 @@ services:
     ports:
       - "5213:8080"
     environment:
-      - MongoDbSettings__ConnectionString=mongodb://mongodb:27017
+      - MongoDbSettings__ConnectionString=mongodb://mongodb:27017?replicaSet=rs0
       - MongoDbSettings__DatabaseName=bik_core_db
       - JwtSettings__Secret=TuClaveSecretaSuperSeguraParaValidarTokensDeCSharp
       - ASPNETCORE_ENVIRONMENT=Production
@@ -36,7 +44,7 @@ services:
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://mongodb:27017/bik_core_db
+      - MONGODB_URI=mongodb://mongodb:27017/bik_core_db?replicaSet=rs0
       - AUTH_SERVICE_URL=http://auth-service:8080
       - CLIENT_URL=http://localhost:5173
       - JWT_SECRET=TuClaveSecretaSuperSeguraParaValidarTokensDeCSharp

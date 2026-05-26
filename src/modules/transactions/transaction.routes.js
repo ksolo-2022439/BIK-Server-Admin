@@ -11,6 +11,7 @@ import {
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isAdmin, hasRole } from '../../middlewares/validate-roles.js';
 import { auditLogger } from '../../middlewares/audit-logger.js';
+import { validateIdempotency } from '../../middlewares/idempotency.js';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.use(auditLogger);
  *       200:
  *         description: Transferencia exitosa.
  */
-router.post('/transfer', executeInternalTransfer);
+router.post('/transfer', validateIdempotency, executeInternalTransfer);
 
 /**
  * @swagger
@@ -87,7 +88,7 @@ router.post('/transfer', executeInternalTransfer);
  *       200:
  *         description: Transferencia ACH en proceso.
  */
-router.post('/ach', executeACHTransfer);
+router.post('/ach', validateIdempotency, executeACHTransfer);
 
 /**
  * @swagger
@@ -114,7 +115,7 @@ router.post('/ach', executeACHTransfer);
  *       200:
  *         description: Transferencia móvil exitosa.
  */
-router.post('/mobile', executeMobileTransfer);
+router.post('/mobile', validateIdempotency, executeMobileTransfer);
 
 /**
  * @swagger
@@ -145,7 +146,7 @@ router.post('/mobile', executeMobileTransfer);
  *       200:
  *         description: Transferencia internacional procesada.
  */
-router.post('/international', executeInternationalTransfer);
+router.post('/international', validateIdempotency, executeInternationalTransfer);
 
 /**
  * @swagger
@@ -172,7 +173,7 @@ router.post('/international', executeInternationalTransfer);
  *       200:
  *         description: Depósito exitoso.
  */
-router.post('/deposit', hasRole('Cajero'), executeCashDeposit);
+router.post('/deposit', hasRole('Cajero'), validateIdempotency, executeCashDeposit);
 
 /**
  * @swagger

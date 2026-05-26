@@ -16,6 +16,7 @@ import {
 import { validateJWT } from '../../middlewares/validate-jwt.js';
 import { isStaff, hasRole } from '../../middlewares/validate-roles.js';
 import { auditLogger } from '../../middlewares/audit-logger.js';
+import { validateIdempotency } from '../../middlewares/idempotency.js';
 
 const router = Router();
 
@@ -244,7 +245,7 @@ router.get('/transactions', listAllTransactions);
  *       200:
  *         description: Retiro realizado exitosamente.
  */
-router.post('/transactions/withdrawal', hasRole('Cajero'), executeWithdrawal);
+router.post('/transactions/withdrawal', hasRole('Cajero'), validateIdempotency, executeWithdrawal);
 
 /**
  * @swagger

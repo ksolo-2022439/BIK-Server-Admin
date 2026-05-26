@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 
 import userRoutes from '../modules/users/user.routes.js';
 import accountRoutes from '../modules/accounts/account.routes.js';
@@ -21,7 +22,31 @@ import { setupSwagger } from './swagger.js';
 
 const app = express();
 
-app.use(helmet());
+// BE-055: Compresión de respuestas HTTP
+app.use(compression());
+
+// BE-057: Configuración de Content Security Policy (CSP) robusta usando Helmet
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:", "https://images.unsplash.com"],
+            connectSrc: [
+                "'self'", 
+                "http://localhost:3000", 
+                "http://localhost:5213", 
+                "http://localhost:5000", 
+                "http://localhost:5173", 
+                "http://localhost:5174", 
+                "http://bik-client-user:5173", 
+                "http://bik-client-admin:5174"
+            ]
+        }
+    }
+}));
 
 /**
  * Configuración CORS multi-origen.
@@ -46,9 +71,16 @@ app.use(cors({
     credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// BE-054: Morgan solo en desarrollo
+if (process.env.NODE_ENV !== 'production') {
+    app.use(morgan('dev'));
+}
+
+import { globalLimiter } from '../middlewares/rate-limiter.js';
+app.use(globalLimiter);
 
 /**
  * Registro de todas las rutas del ecosistema BIK.
@@ -68,7 +100,10 @@ app.use('/api/contacts', contactRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/requests', requestRoutes);
 
-setupSwagger(app);
+// SEC-024: Swagger solo en desarrollo
+if (process.env.NODE_ENV !== 'production') {
+    setupSwagger(app);
+}
 
 /**
  * Endpoint de verificación de disponibilidad del sistema.
@@ -77,6 +112,25 @@ app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'success',
         message: 'BIK Server Admin - Sistema Integral Operativo'
+    });
+});
+
+/**
+ * SEC-025: Middleware global de manejo de errores.
+ * Captura errores no controlados y devuelve una respuesta segura.
+ */
+app.use((err, req, res, next) => {
+    console.error('Error no controlado:', err.message);
+    
+    // No exponer stack traces ni detalles internos
+    const statusCode = err.statusCode || 500;
+    const message = process.env.NODE_ENV === 'production' 
+        ? 'Error interno del servidor' 
+        : err.message;
+
+    res.status(statusCode).json({
+        status: 'error',
+        message
     });
 });
 

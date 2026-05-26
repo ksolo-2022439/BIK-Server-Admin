@@ -27,5 +27,7 @@ accountSchema.statics.findByAnyId = function(id) {
     }
     return this.findOne(query);
 };
+// DB-038: Índice para consultas frecuentes por usuario
+accountSchema.index({ usuarioId: 1, estado: 1 });
 
 export default mongoose.model('Account', accountSchema);

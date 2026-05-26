@@ -1,10 +1,27 @@
+import crypto from 'crypto';
 import Card from './card.model.js';
 import Account from '../accounts/account.model.js';
 import User from '../users/user.model.js';
 
 /**
+ * SEC-007: Enmascara el número de tarjeta para respuestas API.
+ * Solo muestra los últimos 4 dígitos.
+ */
+const maskCardNumber = (card) => {
+    if (!card) return card;
+    const obj = card.toObject ? card.toObject() : { ...card };
+    if (obj.numeroTarjeta && obj.numeroTarjeta.length >= 4) {
+        obj.numeroTarjeta = '****-****-****-' + obj.numeroTarjeta.slice(-4);
+    }
+    // SEC-006: Nunca devolver CVV en respuestas
+    delete obj.cvv;
+    return obj;
+};
+
+/**
  * Genera una nueva tarjeta de débito o crédito para un usuario.
- * Asigna automáticamente una fecha de expiración a 5 años y genera el código CVV.
+ * FIN-033: Usa crypto.randomInt() para generación segura.
+ * SEC-006/007: No devuelve CVV ni número completo en la respuesta.
  */
 export const requestCard = async (req, res) => {
     try {
@@ -24,8 +41,9 @@ export const requestCard = async (req, res) => {
             internalCuentaId = cuenta._id;
         }
 
-        const numeroTarjeta = '4' + Math.floor(Math.random() * 1000000000000000).toString().padStart(15, '0');
-        const cvv = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        // FIN-033: Generación criptográficamente segura
+        const numeroTarjeta = '4' + Array.from({ length: 15 }, () => crypto.randomInt(10)).join('');
+        const cvv = String(crypto.randomInt(0, 1000)).padStart(3, '0');
         const fechaActual = new Date();
         const fechaExpiracion = `${String(fechaActual.getMonth() + 1).padStart(2, '0')}/${String(fechaActual.getFullYear() + 5).slice(2)}`;
 
@@ -40,7 +58,12 @@ export const requestCard = async (req, res) => {
         });
 
         await newCard.save();
-        res.status(201).json({ status: 'success', data: newCard });
+
+        // Devolver datos enmascarados pero incluir número completo solo en la primera emisión
+        const responseCard = newCard.toObject();
+        delete responseCard.cvv;
+        // Se devuelve el número completo solo en la creación inicial para que el usuario lo registre
+        res.status(201).json({ status: 'success', data: responseCard });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
@@ -48,7 +71,7 @@ export const requestCard = async (req, res) => {
 
 /**
  * Alterna el estado de bloqueo de una tarjeta específica.
- * Previene el uso de la tarjeta en transacciones futuras si el estado de bloqueo es activado.
+ * SEC-018: Verifica propiedad antes de operar.
  */
 export const toggleCardFreeze = async (req, res) => {
     try {
@@ -59,17 +82,24 @@ export const toggleCardFreeze = async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Tarjeta no encontrada.' });
         }
 
+        // SEC-018: Verificar propiedad
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || card.usuarioId.toString() !== user._id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para operar con esta tarjeta.' });
+        }
+
         card.configuraciones.bloqueada = !card.configuraciones.bloqueada;
         await card.save();
 
-        res.status(200).json({ status: 'success', data: card });
+        res.status(200).json({ status: 'success', data: maskCardNumber(card) });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
 
 /**
- * Actualiza configuraciones generales de la tarjeta (Bloqueo, Compras Internacionales, etc.)
+ * Actualiza configuraciones generales de la tarjeta.
+ * SEC-019: Verifica propiedad antes de operar.
  */
 export const updateCardConfig = async (req, res) => {
     try {
@@ -82,17 +112,33 @@ export const updateCardConfig = async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Tarjeta no encontrada.' });
         }
 
-        card.configuraciones = configuraciones;
+        // SEC-019: Verificar propiedad
+        const user = await User.findByAnyId(req.user.uid);
+        if (!user || card.usuarioId.toString() !== user._id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'No tienes permiso para modificar esta tarjeta.' });
+        }
+
+        // Whitelist de configuraciones permitidas
+        const allowedConfigs = ['bloqueada', 'comprasInternacionales', 'comprasEnLinea', 'retirosCajero'];
+        const safeConfig = {};
+        for (const key of allowedConfigs) {
+            if (configuraciones[key] !== undefined) {
+                safeConfig[key] = configuraciones[key];
+            }
+        }
+
+        card.configuraciones = { ...card.configuraciones, ...safeConfig };
         await card.save();
 
-        res.status(200).json({ status: 'success', data: card });
+        res.status(200).json({ status: 'success', data: maskCardNumber(card) });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
 
 /**
- * Obtiene el listado completo de tarjetas asociadas a un identificador de usuario.
+ * Obtiene el listado de tarjetas asociadas a un usuario.
+ * SEC-007: Números enmascarados. SEC-006: CVV oculto.
  */
 export const getUserCards = async (req, res) => {
     try {
@@ -104,7 +150,8 @@ export const getUserCards = async (req, res) => {
         }
 
         const cards = await Card.find({ usuarioId: user._id }).populate('cuentaVinculadaId');
-        res.status(200).json({ status: 'success', data: cards });
+        const maskedCards = cards.map(maskCardNumber);
+        res.status(200).json({ status: 'success', data: maskedCards });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }

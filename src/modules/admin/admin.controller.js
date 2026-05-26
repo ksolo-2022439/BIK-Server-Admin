@@ -4,6 +4,12 @@ import Card from '../cards/card.model.js';
 import Transaction from '../transactions/transaction.model.js';
 import Request from '../requests/request.model.js';
 import mongoose from 'mongoose';
+import Decimal from 'decimal.js';
+
+/**
+ * Escapa caracteres especiales de regex para prevenir ReDoS (SEC-014).
+ */
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
  * Obtiene estadísticas generales del sistema para el dashboard administrativo.
@@ -73,12 +79,13 @@ export const listUsers = async (req, res) => {
         const query = {};
 
         if (search) {
+            const safeSearch = escapeRegex(search);
             query.$or = [
-                { nombres: { $regex: search, $options: 'i' } },
-                { apellidos: { $regex: search, $options: 'i' } },
-                { dpi: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { telefono: { $regex: search, $options: 'i' } }
+                { nombres: { $regex: safeSearch, $options: 'i' } },
+                { apellidos: { $regex: safeSearch, $options: 'i' } },
+                { dpi: { $regex: safeSearch, $options: 'i' } },
+                { email: { $regex: safeSearch, $options: 'i' } },
+                { telefono: { $regex: safeSearch, $options: 'i' } }
             ];
         }
         if (estado) query.estado = estado;
@@ -117,13 +124,16 @@ export const getFullClientProfile = async (req, res) => {
         }
 
         // Usamos user._id (ObjectId) para las consultas en otras colecciones
-        const [accounts, cards, recentTransactions] = await Promise.all([
-            Account.find({ usuarioId: user._id }),
+        // DB-039: Obtener cuentas una sola vez para evitar consultas N+1
+        const accounts = await Account.find({ usuarioId: user._id });
+        const accountIds = accounts.map(a => a._id);
+
+        const [cards, recentTransactions] = await Promise.all([
             Card.find({ usuarioId: user._id }),
             Transaction.find({
                 $or: [
-                    { cuentaOrigenId: { $in: await Account.find({ usuarioId: user._id }).distinct('_id') } },
-                    { cuentaDestinoId: { $in: await Account.find({ usuarioId: user._id }).distinct('_id') } }
+                    { cuentaOrigenId: { $in: accountIds } },
+                    { cuentaDestinoId: { $in: accountIds } }
                 ]
             }).sort({ createdAt: -1 }).limit(20)
         ]);
@@ -235,16 +245,17 @@ export const escalateRequest = async (req, res) => {
  * Solo disponible para Cajeros. Requiere cuenta origen y monto.
  */
 export const executeWithdrawal = async (req, res) => {
+    const session = await mongoose.startSession();
     try {
+        session.startTransaction();
         const { cuentaOrigenId, monto, descripcion } = req.body;
         const referenciaCajero = req.user.uid;
 
-        if (!monto || monto <= 0) {
+        if (!monto || typeof monto !== 'number' || monto <= 0) {
             throw new Error('El monto debe ser mayor a cero.');
         }
 
-        // Buscamos por publicId/ObjectId (UUID/String)
-        const cuenta = await Account.findByAnyId(cuentaOrigenId);
+        const cuenta = await Account.findByAnyId(cuentaOrigenId).session(session);
 
         if (!cuenta || cuenta.estado !== 'Activa') {
             throw new Error('Cuenta no válida o inactiva.');
@@ -254,8 +265,8 @@ export const executeWithdrawal = async (req, res) => {
             throw new Error('Fondos insuficientes para el retiro.');
         }
 
-        cuenta.saldo -= monto;
-        await cuenta.save();
+        cuenta.saldo = Number(new Decimal(cuenta.saldo).sub(monto).toFixed(2));
+        await cuenta.save({ session });
 
         const transaction = new Transaction({
             cuentaOrigenId: cuenta._id,
@@ -267,11 +278,15 @@ export const executeWithdrawal = async (req, res) => {
             referenciaCajero
         });
 
-        await transaction.save();
+        await transaction.save({ session });
+        await session.commitTransaction();
 
         res.status(200).json({ status: 'success', data: transaction });
     } catch (error) {
+        await session.abortTransaction();
         res.status(400).json({ status: 'error', message: error.message });
+    } finally {
+        session.endSession();
     }
 };
 

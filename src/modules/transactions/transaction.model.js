@@ -24,6 +24,12 @@ const transactionSchema = new mongoose.Schema({
         type: Number, 
         required: true 
     },
+    montoAcreditado: {
+        type: Number
+    },
+    tasaCambio: {
+        type: Number
+    },
     tipo: { 
         type: String, 
         enum: [
@@ -77,5 +83,10 @@ const transactionSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+// DB-038: Índices para consultas frecuentes
+transactionSchema.index({ cuentaOrigenId: 1, createdAt: -1 });
+transactionSchema.index({ cuentaDestinoId: 1, createdAt: -1 });
+transactionSchema.index({ cuentaOrigenId: 1, estado: 1, createdAt: -1 });
+transactionSchema.index({ tipo: 1, createdAt: -1 });
 
 export default mongoose.model('Transaction', transactionSchema);

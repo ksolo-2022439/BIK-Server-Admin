@@ -7,6 +7,8 @@ const insuranceSchema = new mongoose.Schema({
     primaMensual: { type: Number, required: true },
     estado: { type: String, enum: ['Activo', 'Cancelado'], default: 'Activo' },
     fechaContratacion: { type: Date, default: Date.now }
+}, {
+    timestamps: true
 });
 
 export default mongoose.model('Insurance', insuranceSchema);

@@ -7,6 +7,8 @@ const notificationSchema = new mongoose.Schema({
     tipo: { type: String },
     leido: { type: Boolean, default: false },
     fecha: { type: Date, default: Date.now }
+}, {
+    timestamps: true
 });
 
 export default mongoose.model('Notification', notificationSchema);
