@@ -98,11 +98,13 @@ export const updateUser = async (req, res) => {
             }
         }
 
-        const updatedUser = await User.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
-        
-        if (!updatedUser) {
+        // Resolver usuario por publicId o _id
+        const user = await User.findByAnyId(id);
+        if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
+
+        const updatedUser = await User.findByIdAndUpdate(user._id, updateData, { new: true, runValidators: true });
 
         res.status(200).json({ status: 'success', data: updatedUser });
     } catch (error) {
@@ -127,12 +129,13 @@ export const updateUserStatus = async (req, res) => {
             return res.status(400).json({ status: 'error', message: `Estado inválido. Valores permitidos: ${validStates.join(', ')}` });
         }
 
-        const updatedUser = await User.findByIdAndUpdate(id, { estado }, { new: true });
-        
-        // BE-044: Verificar si el usuario existe
-        if (!updatedUser) {
+        // Resolver usuario por publicId o _id
+        const user = await User.findByAnyId(id);
+        if (!user) {
             return res.status(404).json({ status: 'error', message: 'Usuario no encontrado.' });
         }
+
+        const updatedUser = await User.findByIdAndUpdate(user._id, { estado }, { new: true });
 
         res.status(200).json({ status: 'success', data: updatedUser });
     } catch (error) {

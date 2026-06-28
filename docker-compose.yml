@@ -53,21 +53,6 @@ services:
       - auth-service
     restart: unless-stopped
 
-  client-user:
-    build:
-      context: ../BIK-Client-User
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=http://localhost:3000/api
-        - VITE_AUTH_API_URL=http://localhost:5213/api
-    container_name: bik-client-user
-    ports:
-      - "5173:80"
-    depends_on:
-      - server-admin
-      - auth-service
-    restart: unless-stopped
-
   client-admin:
     build:
       context: ../BIK-Client-Admin
