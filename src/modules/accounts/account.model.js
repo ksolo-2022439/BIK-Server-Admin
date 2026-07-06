@@ -10,6 +10,7 @@ const accountSchema = new mongoose.Schema({
     saldo: { type: Number, default: 0, min: 0 }, // Saldo real
     limiteTransferenciaDiario: { type: Number, default: 5000 },
     isFavorite: { type: Boolean, default: false },
+    alias: { type: String, maxlength: 50, default: '' },
     estado: { 
         type: String, 
         enum: ['Activa', 'Bloqueada', 'Cancelada', 'Congelada'], 

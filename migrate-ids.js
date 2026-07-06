@@ -14,7 +14,7 @@ dotenv.config();
 
 const migrate = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/bik_db');
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/bik_core_db');
     console.log('Connected to MongoDB');
 
     const models = [User, Account, RequestModel, Card, Transaction];
