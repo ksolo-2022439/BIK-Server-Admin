@@ -1,7 +1,8 @@
 FROM node:22-alpine
+RUN npm install -g pnpm@9
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
