@@ -61,7 +61,15 @@ const allowedOrigins = [
 app.use(cors({
     origin: (origin, callback) => {
         // Permitir peticiones sin origen (e.g. Postman, curl)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        const isAllowed = allowedOrigins.includes(origin) || 
+                          origin.startsWith('http://localhost') || 
+                          origin.endsWith('.vercel.app');
+                          
+        if (isAllowed) {
             callback(null, true);
         } else {
             callback(new Error('Origen no permitido por CORS'));
